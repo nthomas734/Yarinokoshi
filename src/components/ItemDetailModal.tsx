@@ -18,13 +18,13 @@ interface ItemDetailModalProps {
 }
 
 const STATUS_COLORS: Record<Status, string> = {
-  dreaming:  theme.dreaming,
-  scheduled: theme.scheduled,
-  boarding:  theme.boarding,
-  departed:  theme.departed
+  someday: theme.someday,
+  planned: theme.planned,
+  soon:    theme.soon,
+  done:    theme.done
 };
 
-const STATUSES: Status[] = ['dreaming', 'scheduled', 'boarding', 'departed'];
+const STATUSES: Status[] = ['someday', 'planned', 'soon', 'done'];
 
 export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalProps) {
   const [memoryNote, setMemoryNote] = useState(item.memory_note ?? '');
@@ -43,20 +43,20 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
 
   async function changeStatus(newStatus: Status) {
     setUpdating(true);
-    const completedBy = newStatus === 'departed'
+    const completedBy = newStatus === 'done'
       ? (typeof window !== 'undefined' ? localStorage.getItem('yarinokoshi_user') : null)
       : null;
 
     const updates: Partial<Item> = {
       status: newStatus,
-      completed_at: newStatus === 'departed' ? new Date().toISOString() : null,
-      completed_by: newStatus === 'departed' ? completedBy : null
+      completed_at: newStatus === 'done' ? new Date().toISOString() : null,
+      completed_by: newStatus === 'done' ? completedBy : null
     };
 
-    if (newStatus === 'departed' && memoryNote.trim()) {
+    if (newStatus === 'done' && memoryNote.trim()) {
       updates.memory_note = memoryNote.trim();
     }
-    if (newStatus === 'departed' && photoUrl) {
+    if (newStatus === 'done' && photoUrl) {
       updates.memory_photo = photoUrl;
     }
 
@@ -102,7 +102,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
     onUpdated();
   }
 
-  const isDeparted = item.status === 'departed';
+  const isDone = item.status === 'done';
 
   return (
     <div
@@ -240,14 +240,14 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
           })}
         </div>
 
-        {/* Memory log (always editable, shown more prominently if departed) */}
+        {/* Memory log (always editable, shown more prominently if done) */}
         <div
           style={{
             padding: 14,
-            border: `1px solid ${isDeparted ? theme.brass : theme.dimmer}`,
+            border: `1px solid ${isDone ? theme.brass : theme.dimmer}`,
             borderRadius: 4,
             marginBottom: 16,
-            background: isDeparted ? 'rgba(200, 169, 126, 0.04)' : 'transparent'
+            background: isDone ? 'rgba(200, 169, 126, 0.04)' : 'transparent'
           }}
         >
           <div
@@ -261,7 +261,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
               textTransform: 'uppercase'
             }}
           >
-            memory log {isDeparted && '✓'}
+            memory log {isDone && '✓'}
           </div>
 
           {photoUrl ? (

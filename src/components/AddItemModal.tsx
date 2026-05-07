@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
-  TIME_WINDOW_LABELS,
   supabase,
   type Category,
   type TimeWindow
@@ -34,13 +33,22 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null); // title that was just saved
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  async function handleSubmit() {
+  // Auto-clear the "just added" confirmation after a few seconds
+  useEffect(() => {
+    if (!justAdded) return;
+    const t = setTimeout(() => setJustAdded(null), 3500);
+    return () => clearTimeout(t);
+  }, [justAdded]);
+
+  async function handleSubmit(addAnother: boolean) {
     if (!title.trim()) {
       setError('title is required');
       return;
@@ -52,11 +60,13 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
       ? localStorage.getItem('yarinokoshi_user') || null
       : null;
 
+    const savedTitle = title.trim();
+
     const { error: dbError } = await supabase.from('items').insert({
-      title: title.trim(),
+      title: savedTitle,
       category,
       time_window: timeWindow,
-      status: 'dreaming',
+      status: 'someday',
       notes: notes.trim() || null,
       added_by: addedBy
     });
@@ -65,6 +75,17 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
 
     if (dbError) {
       setError(dbError.message);
+      return;
+    }
+
+    if (addAnother) {
+      // Reset form for next entry, keep modal open, show confirmation
+      setTitle('');
+      setNotes('');
+      // Keep category & time window — most "add another" cases are similar items
+      setJustAdded(savedTitle);
+      // Refocus the title field so they can type immediately
+      setTimeout(() => titleInputRef.current?.focus(), 50);
     } else {
       onAdded();
     }
@@ -120,7 +141,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
             opacity: 0.7
           }}
         >
-          new departure
+          new item
         </div>
         <div
           style={{
@@ -128,18 +149,39 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
             fontWeight: 300,
             fontSize: 22,
             color: theme.cream,
-            marginBottom: 22
+            marginBottom: justAdded ? 12 : 22
           }}
         >
-          add to the board
+          add to the bucket
         </div>
 
+        {justAdded && (
+          <div
+            style={{
+              fontFamily: "'Geist Mono', monospace",
+              fontSize: 10,
+              letterSpacing: '0.1em',
+              color: theme.done,
+              padding: '8px 12px',
+              border: `1px solid ${theme.done}`,
+              borderRadius: 3,
+              marginBottom: 18,
+              background: 'rgba(107, 142, 107, 0.08)',
+              textTransform: 'uppercase',
+              animation: 'fadeIn 0.3s ease-out'
+            }}
+          >
+            ✓ added "{justAdded}"
+          </div>
+        )}
+
         {/* Title */}
-        <Label>destination</Label>
+        <Label>what do you want to do?</Label>
         <input
+          ref={titleInputRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="what do you want to do?"
+          placeholder="e.g. lincoln park beavers"
           autoFocus
           style={{
             width: '100%',
@@ -206,7 +248,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="any details — links, who suggested it, why it matters…"
+          placeholder="links, who suggested it, why it matters…"
           rows={3}
           style={{
             width: '100%',
@@ -238,7 +280,8 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginTop: 8 }}>
+        {/* Three buttons: cancel · add another · add & close */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 8 }}>
           <button
             onClick={onClose}
             style={{
@@ -246,17 +289,36 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
               border: `1px solid ${theme.dimmer}`,
               borderRadius: 3,
               fontFamily: "'Geist Mono', monospace",
-              fontSize: 11,
-              letterSpacing: '0.15em',
+              fontSize: 10,
+              letterSpacing: '0.12em',
               color: theme.cream,
               textTransform: 'uppercase',
               opacity: 0.8
             }}
           >
-            cancel
+            close
           </button>
           <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit(true)}
+            disabled={submitting}
+            style={{
+              padding: '14px 0',
+              border: `1px solid ${theme.brass}`,
+              borderRadius: 3,
+              fontFamily: "'Geist Mono', monospace",
+              fontSize: 10,
+              letterSpacing: '0.12em',
+              color: theme.brass,
+              background: 'transparent',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              opacity: submitting ? 0.5 : 1
+            }}
+          >
+            + add another
+          </button>
+          <button
+            onClick={() => handleSubmit(false)}
             disabled={submitting}
             style={{
               padding: '14px 0',
@@ -264,14 +326,14 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
               color: theme.board,
               borderRadius: 3,
               fontFamily: "'Geist Mono', monospace",
-              fontSize: 11,
-              letterSpacing: '0.15em',
+              fontSize: 10,
+              letterSpacing: '0.12em',
               fontWeight: 700,
               textTransform: 'uppercase',
               opacity: submitting ? 0.6 : 1
             }}
           >
-            {submitting ? 'adding…' : '+ add to board'}
+            {submitting ? 'adding…' : '+ add & done'}
           </button>
         </div>
       </div>

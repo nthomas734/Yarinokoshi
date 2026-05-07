@@ -46,7 +46,7 @@ create table if not exists items (
   title text not null,
   category text not null,
   time_window text not null default 'any',
-  status text not null default 'dreaming',
+  status text not null default 'someday',
   notes text,
   added_by text,
   completed_by text,

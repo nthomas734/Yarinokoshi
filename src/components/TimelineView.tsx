@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
-  TIME_WINDOW_LABELS,
   type Item,
   type TimeWindow
 } from '@/lib/supabase';
@@ -32,7 +31,7 @@ interface MonthBucket {
 
 export function TimelineView({ items, onSelect }: TimelineViewProps) {
   const buckets = useMemo(() => buildBuckets(items), [items]);
-  const anyTimeItems = items.filter(i => i.time_window === 'any' && i.status !== 'departed');
+  const anyTimeItems = items.filter(i => i.time_window === 'any' && i.status !== 'done');
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out', paddingBottom: 20 }}>
@@ -104,19 +103,26 @@ function buildBuckets(items: Item[]): MonthBucket[] {
     cursor.setMonth(cursor.getMonth() + 1);
   }
 
-  // Drop items into matching buckets (skip departed)
+  // Drop each item into its NEXT upcoming matching bucket only (no duplicates).
+  // If the next match has already passed (none ahead), skip it entirely.
   items.forEach(item => {
-    if (item.status === 'departed') return;
+    if (item.status === 'done') return;
     const tw = item.time_window;
     if (tw === 'any') return; // shown separately
 
     const monthIndex = MONTH_KEYS.indexOf(tw as TimeWindow);
+    let targetBucketIdx: number = -1;
+
     if (monthIndex >= 0) {
-      // Specific month - drop into every bucket matching that month
-      buckets.forEach(b => { if (b.month === monthIndex) b.items.push(item); });
+      // Find first bucket matching this month
+      targetBucketIdx = buckets.findIndex(b => b.month === monthIndex);
     } else if (tw in SEASON_MONTHS) {
       const months = SEASON_MONTHS[tw];
-      buckets.forEach(b => { if (months.includes(b.month)) b.items.push(item); });
+      targetBucketIdx = buckets.findIndex(b => months.includes(b.month));
+    }
+
+    if (targetBucketIdx >= 0) {
+      buckets[targetBucketIdx].items.push(item);
     }
   });
 
@@ -196,7 +202,7 @@ function TimelineItem({ item, onSelect }: { item: Item; onSelect: (item: Item) =
         marginBottom: 4,
         background: theme.surface,
         borderRadius: 3,
-        borderLeft: `2px solid ${theme.scheduled}`,
+        borderLeft: `2px solid ${theme.planned}`,
         width: '100%',
         textAlign: 'left',
         alignItems: 'center'

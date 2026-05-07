@@ -13,7 +13,7 @@ export function MemoriesView({ items, onSelect }: MemoriesViewProps) {
   const completed = useMemo(
     () =>
       items
-        .filter(i => i.status === 'departed')
+        .filter(i => i.status === 'done')
         .sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? '')),
     [items]
   );
@@ -34,7 +34,7 @@ export function MemoriesView({ items, onSelect }: MemoriesViewProps) {
           borderBottom: `1px dashed ${theme.dimmer}`
         }}
       >
-        — {completed.length} departed —
+        — {completed.length} {completed.length === 1 ? 'done' : 'done'} —
       </div>
 
       {completed.length === 0 ? (
@@ -75,7 +75,7 @@ export function MemoriesView({ items, onSelect }: MemoriesViewProps) {
               textTransform: 'uppercase'
             }}
           >
-            mark something departed to begin
+            mark something done to begin
           </div>
         </div>
       ) : (

@@ -8,11 +8,11 @@ export const theme = {
   accent:    '#8B6F47',
   dim:       'rgba(245, 237, 224, 0.4)',
   dimmer:    'rgba(245, 237, 224, 0.15)',
-  // status accents
-  dreaming:  'rgba(245, 237, 224, 0.4)',
-  scheduled: '#C8A97E',
-  boarding:  '#d4a657',
-  departed:  '#6b8e6b'
+  // status accents (renamed: someday/planned/soon/done)
+  someday:  'rgba(245, 237, 224, 0.4)',
+  planned:  '#C8A97E',
+  soon:     '#d4a657',
+  done:     '#6b8e6b'
 };
 
 export const sanDiegoDate = new Date('2027-09-30T00:00:00');

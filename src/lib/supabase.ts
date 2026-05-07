@@ -7,12 +7,11 @@ export const supabase = createClient(url, key, {
   auth: { persistSession: false }
 });
 
-export type Status = 'dreaming' | 'scheduled' | 'boarding' | 'departed';
+export type Status = 'someday' | 'planned' | 'soon' | 'done';
 export type Category =
   | 'neighborhood'
   | 'museum'
   | 'sport'
-  | 'fair'
   | 'road'
   | 'seasonal'
   | 'food'
@@ -46,7 +45,6 @@ export const CATEGORIES: { code: Category; label: string; short: string }[] = [
   { code: 'neighborhood', label: 'neighborhoods', short: 'NBHD' },
   { code: 'museum',       label: 'museums',       short: 'MUSE' },
   { code: 'sport',        label: 'sports',        short: 'SPRT' },
-  { code: 'fair',         label: 'state fairs',   short: 'FAIR' },
   { code: 'road',         label: 'road trips',    short: 'ROAD' },
   { code: 'seasonal',     label: 'seasonal',      short: 'SEAS' },
   { code: 'food',         label: 'food & drink',  short: 'FOOD' },
@@ -55,13 +53,13 @@ export const CATEGORIES: { code: Category; label: string; short: string }[] = [
 ];
 
 export const STATUS_LABELS: Record<Status, string> = {
-  dreaming:  'dreaming',
-  scheduled: 'scheduled',
-  boarding:  'boarding',
-  departed:  'departed ✓'
+  someday: 'someday',
+  planned: 'planned',
+  soon:    'soon',
+  done:    'done ✓'
 };
 
-export const STATUS_ORDER: Status[] = ['boarding', 'scheduled', 'dreaming', 'departed'];
+export const STATUS_ORDER: Status[] = ['soon', 'planned', 'someday', 'done'];
 
 export const TIME_WINDOW_LABELS: Record<TimeWindow, string> = {
   any: 'any time',

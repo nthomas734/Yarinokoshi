@@ -9,7 +9,8 @@ import {
   TIME_WINDOW_LABELS,
   type Category,
   type Item,
-  type Status
+  type Status,
+  type TimeWindow
 } from '@/lib/supabase';
 import { FlapText } from './FlapText';
 
@@ -21,14 +22,32 @@ interface BoardViewProps {
 }
 
 const STATUS_COLORS: Record<Status, string> = {
-  dreaming:  theme.dreaming,
-  scheduled: theme.scheduled,
-  boarding:  theme.boarding,
-  departed:  theme.departed
+  someday: theme.someday,
+  planned: theme.planned,
+  soon:    theme.soon,
+  done:    theme.done
+};
+
+type TimeFilter = 'all' | 'spring' | 'summer' | 'fall' | 'winter';
+
+const SEASON_FILTERS: { code: TimeFilter; label: string }[] = [
+  { code: 'all',    label: 'any time' },
+  { code: 'spring', label: 'spring' },
+  { code: 'summer', label: 'summer' },
+  { code: 'fall',   label: 'fall' },
+  { code: 'winter', label: 'winter' }
+];
+
+const SEASON_TO_MONTHS: Record<string, TimeWindow[]> = {
+  spring: ['mar', 'apr', 'may'],
+  summer: ['jun', 'jul', 'aug'],
+  fall:   ['sep', 'oct', 'nov'],
+  winter: ['dec', 'jan', 'feb']
 };
 
 export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
-  const [filter, setFilter] = useState<'all' | Category>('all');
+  const [catFilter, setCatFilter] = useState<'all' | Category>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
 
   const totalsByCategory = useMemo(() => {
     const counts: Record<string, number> = { all: items.length };
@@ -38,41 +57,70 @@ export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
   }, [items]);
 
   const filtered = useMemo(() => {
-    const base = filter === 'all' ? items : items.filter(i => i.category === filter);
-    // Sort: by status order, then by created_at desc
+    let base = catFilter === 'all' ? items : items.filter(i => i.category === catFilter);
+
+    if (timeFilter !== 'all') {
+      const seasonMonths = SEASON_TO_MONTHS[timeFilter] ?? [];
+      base = base.filter(i =>
+        i.time_window === timeFilter ||
+        seasonMonths.includes(i.time_window as TimeWindow)
+      );
+    }
+
     return base.slice().sort((a, b) => {
       const sd = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
       if (sd !== 0) return sd;
       return b.created_at.localeCompare(a.created_at);
     });
-  }, [items, filter]);
+  }, [items, catFilter, timeFilter]);
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
-      {/* Filter strip */}
+      {/* Filter strip 1: categories */}
       <div
         className="no-scrollbar"
         style={{
           display: 'flex',
           gap: 6,
           overflowX: 'auto',
-          padding: '4px 0 14px',
-          marginBottom: 8
+          padding: '4px 0 8px'
         }}
       >
         <FilterPill
-          active={filter === 'all'}
-          onClick={() => setFilter('all')}
+          active={catFilter === 'all'}
+          onClick={() => setCatFilter('all')}
           label="all"
           count={totalsByCategory.all}
         />
         {CATEGORIES.map(c => (
           <FilterPill
             key={c.code}
-            active={filter === c.code}
-            onClick={() => setFilter(c.code)}
+            active={catFilter === c.code}
+            onClick={() => setCatFilter(c.code)}
             label={c.label}
             count={totalsByCategory[c.code] ?? 0}
+          />
+        ))}
+      </div>
+
+      {/* Filter strip 2: time/season */}
+      <div
+        className="no-scrollbar"
+        style={{
+          display: 'flex',
+          gap: 6,
+          overflowX: 'auto',
+          padding: '0 0 14px',
+          marginBottom: 8
+        }}
+      >
+        {SEASON_FILTERS.map(s => (
+          <FilterPill
+            key={s.code}
+            active={timeFilter === s.code}
+            onClick={() => setTimeFilter(s.code)}
+            label={s.label}
+            subtle
           />
         ))}
       </div>
@@ -90,7 +138,7 @@ export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
             textTransform: 'uppercase'
           }}
         >
-          loading board…
+          loading bucket…
         </div>
       )}
 
@@ -145,12 +193,14 @@ function FilterPill({
   active,
   onClick,
   label,
-  count
+  count,
+  subtle
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
-  count: number;
+  count?: number;
+  subtle?: boolean;
 }) {
   return (
     <button
@@ -161,16 +211,20 @@ function FilterPill({
         fontSize: 9,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        padding: '6px 10px',
+        padding: subtle ? '5px 9px' : '6px 10px',
         border: `1px solid ${active ? theme.brass : 'rgba(200, 169, 126, 0.25)'}`,
         borderRadius: 3,
         color: active ? theme.board : theme.brass,
         background: active ? theme.brass : 'transparent',
         fontWeight: active ? 700 : 400,
+        opacity: subtle && !active ? 0.7 : 1,
         transition: 'all 0.15s ease'
       }}
     >
-      {label} <span style={{ marginLeft: 4, opacity: active ? 0.7 : 0.6 }}>{count}</span>
+      {label}
+      {count !== undefined && (
+        <span style={{ marginLeft: 4, opacity: active ? 0.7 : 0.6 }}>{count}</span>
+      )}
     </button>
   );
 }
@@ -202,7 +256,7 @@ function Row({
         alignItems: 'center',
         width: '100%',
         textAlign: 'left',
-        opacity: item.status === 'departed' ? 0.6 : 1,
+        opacity: item.status === 'done' ? 0.6 : 1,
         animation: `fadeIn 0.4s ease-out ${index * 30}ms both`,
         transition: 'background 0.15s ease'
       }}
@@ -245,7 +299,7 @@ function Row({
           textTransform: 'uppercase',
           color: accent,
           whiteSpace: 'nowrap',
-          animation: item.status === 'boarding' ? 'pulseBoarding 2s ease-in-out infinite' : undefined
+          animation: item.status === 'soon' ? 'pulseBoarding 2s ease-in-out infinite' : undefined
         }}
       >
         <FlapText
@@ -289,7 +343,7 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
           marginBottom: 8
         }}
       >
-        {hasItems ? 'nothing in this category yet' : 'the board is empty'}
+        {hasItems ? 'nothing matches these filters' : 'the bucket is empty'}
       </div>
       <div
         style={{
@@ -301,24 +355,26 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
           marginBottom: 24
         }}
       >
-        tap + to add the first thing
+        {hasItems ? 'try clearing a filter' : 'tap + to add the first thing'}
       </div>
-      <button
-        onClick={onAdd}
-        style={{
-          fontFamily: "'Geist Mono', monospace",
-          fontSize: 11,
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          padding: '10px 22px',
-          background: theme.brass,
-          color: theme.board,
-          borderRadius: 3,
-          fontWeight: 700
-        }}
-      >
-        + add item
-      </button>
+      {!hasItems && (
+        <button
+          onClick={onAdd}
+          style={{
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: 11,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            padding: '10px 22px',
+            background: theme.brass,
+            color: theme.board,
+            borderRadius: 3,
+            fontWeight: 700
+          }}
+        >
+          + add to bucket
+        </button>
+      )}
     </div>
   );
 }
