@@ -5,6 +5,7 @@ import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
   itemCoversMonth,
+  timelineMode,
   type Item
 } from '@/lib/supabase';
 
@@ -25,10 +26,21 @@ interface MonthBucket {
 export function TimelineView({ items, onSelect }: TimelineViewProps) {
   const buckets = useMemo(() => buildBuckets(items), [items]);
   const anyTimeItems = items.filter(i =>
-    (!i.seasons || i.seasons.length === 0) &&
-    !i.date_start &&
-    i.status !== 'done'
+    timelineMode(i) === 'any' && i.status !== 'done'
   );
+
+  // Group buckets by year for header bands
+  const years: { year: number; buckets: MonthBucket[] }[] = useMemo(() => {
+    const grouped: Record<number, MonthBucket[]> = {};
+    buckets.forEach(b => {
+      if (!grouped[b.year]) grouped[b.year] = [];
+      grouped[b.year].push(b);
+    });
+    return Object.keys(grouped)
+      .map(y => parseInt(y))
+      .sort((a, b) => a - b)
+      .map(year => ({ year, buckets: grouped[year] }));
+  }, [buckets]);
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out', paddingBottom: 20 }}>
@@ -49,13 +61,18 @@ export function TimelineView({ items, onSelect }: TimelineViewProps) {
         — now → september 2027 —
       </div>
 
-      {buckets.map((bucket, idx) => (
-        <MonthBlock
-          key={`${bucket.year}-${bucket.month}`}
-          bucket={bucket}
-          isFirst={idx === 0}
-          onSelect={onSelect}
-        />
+      {years.map(({ year, buckets: yearBuckets }, yearIdx) => (
+        <div key={year}>
+          <YearBand year={year} isFirst={yearIdx === 0} />
+          {yearBuckets.map((bucket, idx) => (
+            <MonthBlock
+              key={`${bucket.year}-${bucket.month}`}
+              bucket={bucket}
+              isFirst={yearIdx === 0 && idx === 0}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
       ))}
 
       {anyTimeItems.length > 0 && (
@@ -83,6 +100,35 @@ export function TimelineView({ items, onSelect }: TimelineViewProps) {
   );
 }
 
+function YearBand({ year, isFirst }: { year: number; isFirst: boolean }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: isFirst ? '0 0 18px' : '24px 0 18px',
+        marginTop: isFirst ? 0 : 8
+      }}
+    >
+      <div style={{ flex: 1, height: 1, background: theme.dimmer }} />
+      <div
+        style={{
+          fontFamily: "'Fraunces', serif",
+          fontWeight: 300,
+          fontSize: 18,
+          letterSpacing: '0.04em',
+          color: theme.brass,
+          padding: '0 4px'
+        }}
+      >
+        {year}
+      </div>
+      <div style={{ flex: 1, height: 1, background: theme.dimmer }} />
+    </div>
+  );
+}
+
 function buildBuckets(items: Item[]): MonthBucket[] {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -94,35 +140,35 @@ function buildBuckets(items: Item[]): MonthBucket[] {
     buckets.push({
       year: cursor.getFullYear(),
       month: cursor.getMonth(),
-      label: `${MONTH_NAMES[cursor.getMonth()]} ${String(cursor.getFullYear()).slice(-2)}`,
+      label: MONTH_NAMES[cursor.getMonth()],
       items: []
     });
     cursor.setMonth(cursor.getMonth() + 1);
   }
 
-  // For each item, place it in matching buckets.
-  // Behavior:
-  //  - If item has specific date range: show in every month the range covers
-  //  - If item has season tags only: show in only the NEXT upcoming matching month (rolls forward)
+  // Place items based on their precision:
+  //  - 'exact' (date range): show in every covered month
+  //  - 'month' (specific months tagged): show in every matching month (not just next)
+  //  - 'season' (only seasons): show in next upcoming matching month, then roll forward
+  //  - 'any': handled separately in the anyTime section
   items.forEach(item => {
     if (item.status === 'done') return;
-    const hasDateRange = !!item.date_start;
+    const mode = timelineMode(item);
 
-    if (hasDateRange) {
-      // Show in every overlapping month
+    if (mode === 'exact') {
       buckets.forEach(b => {
-        if (itemCoversMonth(item, b.year, b.month)) {
-          b.items.push(item);
-        }
+        if (itemCoversMonth(item, b.year, b.month)) b.items.push(item);
       });
-    } else if (item.seasons && item.seasons.length > 0) {
-      // Show only in the next matching month
+    } else if (mode === 'month') {
+      // Show in every bucket whose month is in the months[] list
+      buckets.forEach(b => {
+        if (itemCoversMonth(item, b.year, b.month)) b.items.push(item);
+      });
+    } else if (mode === 'season') {
+      // Roll-forward: only the NEXT matching month
       const targetIdx = buckets.findIndex(b => itemCoversMonth(item, b.year, b.month));
-      if (targetIdx >= 0) {
-        buckets[targetIdx].items.push(item);
-      }
+      if (targetIdx >= 0) buckets[targetIdx].items.push(item);
     }
-    // Items with no seasons and no date range are shown in the "anytime" section below
   });
 
   return buckets;
@@ -155,19 +201,13 @@ function MonthBlock({
             fontFamily: "'Geist Mono', monospace",
             fontSize: 13,
             fontWeight: 700,
-            letterSpacing: '0.15em',
+            letterSpacing: '0.18em',
             color: isFirst ? theme.brass : theme.cream
           }}
         >
           {bucket.label}
         </div>
-        <div
-          style={{
-            flex: 1,
-            height: 1,
-            background: theme.dimmer
-          }}
-        />
+        <div style={{ flex: 1, height: 1, background: theme.dimmer }} />
         <div
           style={{
             fontFamily: "'Geist Mono', monospace",
@@ -207,19 +247,10 @@ function TimelineItem({ item, onSelect }: { item: Item; onSelect: (item: Item) =
         alignItems: 'center'
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          minWidth: 0
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <span
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
+            width: 6, height: 6, borderRadius: '50%',
             background: cat?.color ?? theme.brass,
             flexShrink: 0
           }}

@@ -11,55 +11,45 @@ export function Header() {
         position: 'relative'
       }}
     >
-      {/* Pail logo — Chicago skyline with bucket handle */}
+      {/* Pail-Die Hybrid mark — die with bucket handle */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: 10,
+          marginBottom: 12,
           animation: 'fadeIn 0.6s ease-out'
         }}
       >
         <svg
-          viewBox="0 0 200 200"
-          width="56"
-          height="56"
+          viewBox="0 0 50 50"
+          width="52"
+          height="52"
           xmlns="http://www.w3.org/2000/svg"
           aria-label="pail"
         >
           {/* Bucket handle arching above */}
           <path
-            d="M 50 95 Q 50 50, 100 50 Q 150 50, 150 95"
+            d="M 13 16 Q 13 8, 25 8 Q 37 8, 37 16"
             fill="none"
             stroke={theme.brass}
-            strokeWidth="5"
+            strokeWidth="2"
             strokeLinecap="round"
-            strokeLinejoin="round"
           />
-          {/* Chicago skyline silhouette */}
-          <path
-            d="M 35 155 L 35 120 L 50 120 L 50 100 L 60 100 L 60 120
-               L 70 120 L 70 85 L 76 85 L 76 70 L 80 70 L 80 55
-               L 82 55 L 82 70 L 86 70 L 86 85 L 92 85 L 92 100
-               L 102 100 L 102 75 L 108 75 L 108 60 L 118 60 L 118 75
-               L 124 75 L 124 100 L 134 100 L 134 120 L 150 120 L 150 95
-               L 162 95 L 162 120 L 175 120 L 175 155 Z"
+          {/* Die body */}
+          <rect
+            x="11" y="17" width="28" height="26" rx="4"
             fill="none"
             stroke={theme.brass}
-            strokeWidth="5"
-            strokeLinecap="round"
+            strokeWidth="2"
             strokeLinejoin="round"
-          />
-          {/* Lake horizon */}
-          <line
-            x1="25"
-            y1="170"
-            x2="175"
-            y2="170"
-            stroke={theme.brass}
-            strokeWidth="3.5"
             strokeLinecap="round"
           />
+          {/* 5 pips */}
+          <circle cx="18" cy="24" r="1.8" fill={theme.brass} />
+          <circle cx="32" cy="24" r="1.8" fill={theme.brass} />
+          <circle cx="25" cy="30" r="1.8" fill={theme.brass} />
+          <circle cx="18" cy="36" r="1.8" fill={theme.brass} />
+          <circle cx="32" cy="36" r="1.8" fill={theme.brass} />
         </svg>
       </div>
 

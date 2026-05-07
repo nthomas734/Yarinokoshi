@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
+  MONTHS,
   SEASONS,
   supabase,
   type Category,
+  type Month,
   type Season
 } from '@/lib/supabase';
 
@@ -19,6 +21,8 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('just');
   const [seasons, setSeasons] = useState<Set<Season>>(new Set());
+  const [months, setMonths] = useState<Set<Month>>(new Set());
+  const [showMonths, setShowMonths] = useState(false);
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
@@ -46,6 +50,13 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
       return next;
     });
   }
+  function toggleMonth(m: Month) {
+    setMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m); else next.add(m);
+      return next;
+    });
+  }
 
   async function handleSubmit(addAnother: boolean) {
     if (!title.trim()) {
@@ -69,9 +80,10 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
       title: savedTitle,
       category,
       seasons: Array.from(seasons),
+      months: Array.from(months),
       date_start: showDateRange && dateStart ? dateStart : null,
       date_end: showDateRange && dateEnd ? dateEnd : (showDateRange && dateStart ? dateStart : null),
-      time_window: 'any', // legacy field, kept for backward compat
+      time_window: 'any', // legacy
       status: 'someday',
       notes: notes.trim() || null,
       added_by: addedBy
@@ -87,7 +99,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
     if (addAnother) {
       setTitle('');
       setNotes('');
-      // Keep category, seasons, date range — usually you're adding similar items
+      // Keep category, seasons, months, date range — usually adding similar items
       setJustAdded(savedTitle);
       setTimeout(() => titleInputRef.current?.focus(), 50);
     } else {
@@ -124,15 +136,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           animation: 'slideUp 0.3s ease-out'
         }}
       >
-        <div
-          style={{
-            width: 40,
-            height: 4,
-            background: theme.dimmer,
-            borderRadius: 2,
-            margin: '0 auto 18px'
-          }}
-        />
+        <div style={{ width: 40, height: 4, background: theme.dimmer, borderRadius: 2, margin: '0 auto 18px' }} />
 
         <div
           style={{
@@ -202,14 +206,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
         />
 
         <Label>category</Label>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 6,
-            marginBottom: 18
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 18 }}>
           {CATEGORIES.map(c => (
             <CategoryButton
               key={c.code}
@@ -222,7 +219,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
         </div>
 
         <Label>season tags (optional)</Label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
           {SEASONS.map(s => (
             <PillButton
               key={s.code}
@@ -234,15 +231,52 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           ))}
         </div>
 
-        {/* Optional date range toggle */}
+        {/* Specific months toggle */}
+        <button
+          onClick={() => setShowMonths(v => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 0',
+            marginBottom: showMonths ? 8 : 12,
+            background: 'transparent',
+            border: 'none',
+            color: theme.brass,
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: 10,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            opacity: 0.8
+          }}
+        >
+          <span style={{ fontSize: 14, lineHeight: 1, width: 14 }}>{showMonths ? '−' : '+'}</span>
+          specific month{months.size > 0 ? `s (${months.size})` : 's'}
+        </button>
+
+        {showMonths && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, marginBottom: 14 }}>
+            {MONTHS.map(m => (
+              <PillButton
+                key={m.code}
+                active={months.has(m.code)}
+                onClick={() => toggleMonth(m.code)}
+              >
+                {m.label}
+              </PillButton>
+            ))}
+          </div>
+        )}
+
+        {/* Specific date range toggle */}
         <button
           onClick={() => setShowDateRange(v => !v)}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: '8px 0',
-            marginBottom: 12,
+            padding: '6px 0',
+            marginBottom: showDateRange ? 8 : 16,
             background: 'transparent',
             border: 'none',
             color: theme.brass,
@@ -271,60 +305,22 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
             }}
           >
             <div>
-              <div style={{
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: 8,
-                letterSpacing: '0.15em',
-                color: theme.dim,
-                textTransform: 'uppercase',
-                marginBottom: 4
-              }}>
-                from
-              </div>
+              <SubLabel>from</SubLabel>
               <input
                 type="date"
                 value={dateStart}
                 onChange={(e) => setDateStart(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: theme.bg,
-                  border: `1px solid ${theme.dimmer}`,
-                  borderRadius: 3,
-                  padding: '8px 10px',
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: 11,
-                  color: theme.cream,
-                  colorScheme: 'dark'
-                }}
+                style={dateInputStyle}
               />
             </div>
             <div>
-              <div style={{
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: 8,
-                letterSpacing: '0.15em',
-                color: theme.dim,
-                textTransform: 'uppercase',
-                marginBottom: 4
-              }}>
-                to (optional)
-              </div>
+              <SubLabel>to (optional)</SubLabel>
               <input
                 type="date"
                 value={dateEnd}
                 onChange={(e) => setDateEnd(e.target.value)}
                 min={dateStart || undefined}
-                style={{
-                  width: '100%',
-                  background: theme.bg,
-                  border: `1px solid ${theme.dimmer}`,
-                  borderRadius: 3,
-                  padding: '8px 10px',
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: 11,
-                  color: theme.cream,
-                  colorScheme: 'dark'
-                }}
+                style={dateInputStyle}
               />
             </div>
           </div>
@@ -367,57 +363,11 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 8 }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '14px 0',
-              border: `1px solid ${theme.dimmer}`,
-              borderRadius: 3,
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 10,
-              letterSpacing: '0.12em',
-              color: theme.cream,
-              textTransform: 'uppercase',
-              opacity: 0.8
-            }}
-          >
-            close
-          </button>
-          <button
-            onClick={() => handleSubmit(true)}
-            disabled={submitting}
-            style={{
-              padding: '14px 0',
-              border: `1px solid ${theme.brass}`,
-              borderRadius: 3,
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 10,
-              letterSpacing: '0.12em',
-              color: theme.brass,
-              background: 'transparent',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              opacity: submitting ? 0.5 : 1
-            }}
-          >
+          <button onClick={onClose} style={btnSecondary}>close</button>
+          <button onClick={() => handleSubmit(true)} disabled={submitting} style={{ ...btnOutline, opacity: submitting ? 0.5 : 1 }}>
             + add another
           </button>
-          <button
-            onClick={() => handleSubmit(false)}
-            disabled={submitting}
-            style={{
-              padding: '14px 0',
-              background: theme.brass,
-              color: theme.board,
-              borderRadius: 3,
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 10,
-              letterSpacing: '0.12em',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              opacity: submitting ? 0.6 : 1
-            }}
-          >
+          <button onClick={() => handleSubmit(false)} disabled={submitting} style={{ ...btnPrimary, opacity: submitting ? 0.6 : 1 }}>
             {submitting ? 'adding…' : '+ add & done'}
           </button>
         </div>
@@ -428,33 +378,38 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        fontFamily: "'Geist Mono', monospace",
-        fontSize: 9,
-        letterSpacing: '0.2em',
-        color: theme.brass,
-        opacity: 0.65,
-        marginBottom: 6,
-        textTransform: 'uppercase'
-      }}
-    >
+    <div style={{
+      fontFamily: "'Geist Mono', monospace",
+      fontSize: 9,
+      letterSpacing: '0.2em',
+      color: theme.brass,
+      opacity: 0.65,
+      marginBottom: 6,
+      textTransform: 'uppercase'
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: "'Geist Mono', monospace",
+      fontSize: 8,
+      letterSpacing: '0.15em',
+      color: theme.dim,
+      textTransform: 'uppercase',
+      marginBottom: 4
+    }}>
       {children}
     </div>
   );
 }
 
 function CategoryButton({
-  active,
-  onClick,
-  color,
-  label
-}: {
-  active: boolean;
-  onClick: () => void;
-  color: string;
-  label: string;
-}) {
+  active, onClick, color, label
+}: { active: boolean; onClick: () => void; color: string; label: string; }) {
   return (
     <button
       onClick={onClick}
@@ -477,30 +432,20 @@ function CategoryButton({
     >
       <span
         style={{
-          width: 9,
-          height: 9,
-          borderRadius: '50%',
+          width: 9, height: 9, borderRadius: '50%',
           background: color,
           opacity: active ? 1 : 0.5,
           flexShrink: 0
         }}
       />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {label}
-      </span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
     </button>
   );
 }
 
 function PillButton({
-  active,
-  onClick,
-  children
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+  active, onClick, children
+}: { active: boolean; onClick: () => void; children: React.ReactNode; }) {
   return (
     <button
       onClick={onClick}
@@ -509,16 +454,68 @@ function PillButton({
         fontSize: 9,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        padding: '8px 10px',
+        padding: '8px 4px',
         border: `1px solid ${active ? theme.brass : theme.dimmer}`,
         borderRadius: 3,
         color: active ? theme.board : theme.cream,
         background: active ? theme.brass : 'transparent',
         fontWeight: active ? 700 : 400,
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        textAlign: 'center'
       }}
     >
       {children}
     </button>
   );
 }
+
+const dateInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: theme.bg,
+  border: `1px solid ${theme.dimmer}`,
+  borderRadius: 3,
+  padding: '8px 10px',
+  fontFamily: "'Geist Mono', monospace",
+  fontSize: 11,
+  color: theme.cream,
+  colorScheme: 'dark'
+};
+
+const btnSecondary: React.CSSProperties = {
+  padding: '14px 0',
+  border: `1px solid ${theme.dimmer}`,
+  borderRadius: 3,
+  fontFamily: "'Geist Mono', monospace",
+  fontSize: 10,
+  letterSpacing: '0.12em',
+  color: theme.cream,
+  textTransform: 'uppercase',
+  opacity: 0.8,
+  background: 'transparent'
+};
+
+const btnOutline: React.CSSProperties = {
+  padding: '14px 0',
+  border: `1px solid ${theme.brass}`,
+  borderRadius: 3,
+  fontFamily: "'Geist Mono', monospace",
+  fontSize: 10,
+  letterSpacing: '0.12em',
+  color: theme.brass,
+  background: 'transparent',
+  fontWeight: 600,
+  textTransform: 'uppercase'
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: '14px 0',
+  background: theme.brass,
+  color: theme.board,
+  borderRadius: 3,
+  fontFamily: "'Geist Mono', monospace",
+  fontSize: 10,
+  letterSpacing: '0.12em',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  border: 'none'
+};

@@ -43,10 +43,11 @@ export default function HomePage() {
       .select('*')
       .order('created_at', { ascending: false });
     if (!error && data) {
-      // Normalize: ensure seasons is always an array (some legacy rows may have null)
+      // Normalize: ensure seasons and months are always arrays (some legacy rows may have null)
       const normalized = (data as Item[]).map(item => ({
         ...item,
-        seasons: item.seasons ?? []
+        seasons: item.seasons ?? [],
+        months: item.months ?? []
       }));
       setItems(normalized);
     }

@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
+  MONTHS,
   SEASONS,
   STATUS_LABELS,
   supabase,
   timeWindowLabel,
   type Category,
   type Item,
+  type Month,
   type Season,
   type Status
 } from '@/lib/supabase';
@@ -32,10 +34,12 @@ const STATUSES: Status[] = ['someday', 'planned', 'soon', 'done'];
 export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalProps) {
   const [editMode, setEditMode] = useState(false);
 
-  // Edit form state (initialized from item)
+  // Edit form state
   const [editTitle, setEditTitle] = useState(item.title);
   const [editCategory, setEditCategory] = useState<Category>(item.category);
   const [editSeasons, setEditSeasons] = useState<Set<Season>>(new Set(item.seasons || []));
+  const [editMonths, setEditMonths] = useState<Set<Month>>(new Set(item.months || []));
+  const [editShowMonths, setEditShowMonths] = useState((item.months || []).length > 0);
   const [editShowDateRange, setEditShowDateRange] = useState(!!item.date_start);
   const [editDateStart, setEditDateStart] = useState(item.date_start ?? '');
   const [editDateEnd, setEditDateEnd] = useState(item.date_end ?? '');
@@ -95,17 +99,14 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
     setPhotoUploading(true);
     const ext = file.name.split('.').pop() || 'jpg';
     const path = `${item.id}-${Date.now()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('memories')
-      .upload(path, file, { upsert: false, contentType: file.type });
-
+    const { error: uploadError } = await supabase.storage.from('memories').upload(path, file, {
+      upsert: false, contentType: file.type
+    });
     if (uploadError) {
       console.error(uploadError);
       setPhotoUploading(false);
       return;
     }
-
     const { data } = supabase.storage.from('memories').getPublicUrl(path);
     setPhotoUrl(data.publicUrl);
     setPhotoUploading(false);
@@ -134,6 +135,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
       title: editTitle.trim(),
       category: editCategory,
       seasons: Array.from(editSeasons),
+      months: Array.from(editMonths),
       date_start: editShowDateRange && editDateStart ? editDateStart : null,
       date_end: editShowDateRange && editDateEnd ? editDateEnd : (editShowDateRange && editDateStart ? editDateStart : null),
       notes: editNotes.trim() || null
@@ -151,10 +153,11 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
   }
 
   function cancelEdit() {
-    // Reset edits to current item values
     setEditTitle(item.title);
     setEditCategory(item.category);
     setEditSeasons(new Set(item.seasons || []));
+    setEditMonths(new Set(item.months || []));
+    setEditShowMonths((item.months || []).length > 0);
     setEditShowDateRange(!!item.date_start);
     setEditDateStart(item.date_start ?? '');
     setEditDateEnd(item.date_end ?? '');
@@ -194,20 +197,11 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
           animation: 'slideUp 0.3s ease-out'
         }}
       >
-        <div
-          style={{
-            width: 40,
-            height: 4,
-            background: theme.dimmer,
-            borderRadius: 2,
-            margin: '0 auto 18px'
-          }}
-        />
+        <div style={{ width: 40, height: 4, background: theme.dimmer, borderRadius: 2, margin: '0 auto 18px' }} />
 
         {!editMode ? (
           // ============ READ MODE ============
           <>
-            {/* Title block with edit button */}
             <div style={{ marginBottom: 20, position: 'relative' }}>
               <button
                 onClick={() => setEditMode(true)}
@@ -244,14 +238,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                   paddingRight: 70
                 }}
               >
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: cat?.color ?? theme.brass
-                  }}
-                />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: cat?.color ?? theme.brass }} />
                 {cat?.label} · {timeWindowLabel(item)}
               </div>
               <div
@@ -288,16 +275,8 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
               )}
             </div>
 
-            {/* Status selector */}
             <Label>status</Label>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: 4,
-                marginBottom: 20
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 20 }}>
               {STATUSES.map(s => {
                 const active = item.status === s;
                 return (
@@ -454,7 +433,6 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
               )}
             </div>
 
-            {/* Delete + close */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
               {!confirmDelete ? (
                 <button
@@ -468,7 +446,8 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                     letterSpacing: '0.15em',
                     color: '#d97a7a',
                     textTransform: 'uppercase',
-                    opacity: 0.8
+                    opacity: 0.8,
+                    background: 'transparent'
                   }}
                 >
                   delete
@@ -586,24 +565,20 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                   >
                     <span
                       style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: '50%',
+                        width: 9, height: 9, borderRadius: '50%',
                         background: c.color,
                         opacity: active ? 1 : 0.5,
                         flexShrink: 0
                       }}
                     />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.label}
-                    </span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                   </button>
                 );
               })}
             </div>
 
             <Label>season tags</Label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
               {SEASONS.map(s => {
                 const active = editSeasons.has(s.code);
                 return (
@@ -621,7 +596,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                       fontSize: 9,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
-                      padding: '8px 10px',
+                      padding: '8px 4px',
                       border: `1px solid ${active ? theme.brass : theme.dimmer}`,
                       borderRadius: 3,
                       color: active ? theme.board : theme.cream,
@@ -635,14 +610,72 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
               })}
             </div>
 
+            {/* Specific months toggle */}
+            <button
+              onClick={() => setEditShowMonths(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 0',
+                marginBottom: editShowMonths ? 8 : 12,
+                background: 'transparent',
+                border: 'none',
+                color: theme.brass,
+                fontFamily: "'Geist Mono', monospace",
+                fontSize: 10,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                opacity: 0.8
+              }}
+            >
+              <span style={{ fontSize: 14, lineHeight: 1, width: 14 }}>{editShowMonths ? '−' : '+'}</span>
+              specific month{editMonths.size > 0 ? `s (${editMonths.size})` : 's'}
+            </button>
+
+            {editShowMonths && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, marginBottom: 14 }}>
+                {MONTHS.map(m => {
+                  const active = editMonths.has(m.code);
+                  return (
+                    <button
+                      key={m.code}
+                      onClick={() => {
+                        setEditMonths(prev => {
+                          const next = new Set(prev);
+                          if (next.has(m.code)) next.delete(m.code); else next.add(m.code);
+                          return next;
+                        });
+                      }}
+                      style={{
+                        fontFamily: "'Geist Mono', monospace",
+                        fontSize: 9,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        padding: '8px 4px',
+                        border: `1px solid ${active ? theme.brass : theme.dimmer}`,
+                        borderRadius: 3,
+                        color: active ? theme.board : theme.cream,
+                        background: active ? theme.brass : 'transparent',
+                        fontWeight: active ? 700 : 400,
+                        textAlign: 'center'
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <button
               onClick={() => setEditShowDateRange(v => !v)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '8px 0',
-                marginBottom: 12,
+                padding: '6px 0',
+                marginBottom: editShowDateRange ? 8 : 16,
                 background: 'transparent',
                 border: 'none',
                 color: theme.brass,
@@ -671,60 +704,22 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                 }}
               >
                 <div>
-                  <div style={{
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: 8,
-                    letterSpacing: '0.15em',
-                    color: theme.dim,
-                    textTransform: 'uppercase',
-                    marginBottom: 4
-                  }}>
-                    from
-                  </div>
+                  <SubLabel>from</SubLabel>
                   <input
                     type="date"
                     value={editDateStart}
                     onChange={(e) => setEditDateStart(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: theme.bg,
-                      border: `1px solid ${theme.dimmer}`,
-                      borderRadius: 3,
-                      padding: '8px 10px',
-                      fontFamily: "'Geist Mono', monospace",
-                      fontSize: 11,
-                      color: theme.cream,
-                      colorScheme: 'dark'
-                    }}
+                    style={dateInputStyle}
                   />
                 </div>
                 <div>
-                  <div style={{
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: 8,
-                    letterSpacing: '0.15em',
-                    color: theme.dim,
-                    textTransform: 'uppercase',
-                    marginBottom: 4
-                  }}>
-                    to (optional)
-                  </div>
+                  <SubLabel>to (optional)</SubLabel>
                   <input
                     type="date"
                     value={editDateEnd}
                     onChange={(e) => setEditDateEnd(e.target.value)}
                     min={editDateStart || undefined}
-                    style={{
-                      width: '100%',
-                      background: theme.bg,
-                      border: `1px solid ${theme.dimmer}`,
-                      borderRadius: 3,
-                      padding: '8px 10px',
-                      fontFamily: "'Geist Mono', monospace",
-                      fontSize: 11,
-                      color: theme.cream,
-                      colorScheme: 'dark'
-                    }}
+                    style={dateInputStyle}
                   />
                 </div>
               </div>
@@ -777,7 +772,8 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                   letterSpacing: '0.15em',
                   color: theme.cream,
                   textTransform: 'uppercase',
-                  opacity: 0.8
+                  opacity: 0.8,
+                  background: 'transparent'
                 }}
               >
                 cancel
@@ -795,7 +791,8 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                   letterSpacing: '0.15em',
                   fontWeight: 700,
                   textTransform: 'uppercase',
-                  opacity: updating ? 0.5 : 1
+                  opacity: updating ? 0.5 : 1,
+                  border: 'none'
                 }}
               >
                 {updating ? 'saving…' : 'save changes'}
@@ -810,18 +807,43 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        fontFamily: "'Geist Mono', monospace",
-        fontSize: 9,
-        letterSpacing: '0.2em',
-        color: theme.brass,
-        opacity: 0.65,
-        marginBottom: 6,
-        textTransform: 'uppercase'
-      }}
-    >
+    <div style={{
+      fontFamily: "'Geist Mono', monospace",
+      fontSize: 9,
+      letterSpacing: '0.2em',
+      color: theme.brass,
+      opacity: 0.65,
+      marginBottom: 6,
+      textTransform: 'uppercase'
+    }}>
       {children}
     </div>
   );
 }
+
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: "'Geist Mono', monospace",
+      fontSize: 8,
+      letterSpacing: '0.15em',
+      color: theme.dim,
+      textTransform: 'uppercase',
+      marginBottom: 4
+    }}>
+      {children}
+    </div>
+  );
+}
+
+const dateInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: theme.bg,
+  border: `1px solid ${theme.dimmer}`,
+  borderRadius: 3,
+  padding: '8px 10px',
+  fontFamily: "'Geist Mono', monospace",
+  fontSize: 11,
+  color: theme.cream,
+  colorScheme: 'dark'
+};

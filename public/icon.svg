@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Aubergine background, iOS-rounded -->
+  <rect width="1024" height="1024" rx="225" ry="225" fill="#2A1F2E"/>
+
+  <!-- Pail-Die Hybrid: scaled into 1024 canvas from 50x50 design -->
+  <g transform="translate(112, 112) scale(16)">
+    <!-- Bucket handle arching above the die -->
+    <path
+      d="M 13 16 Q 13 8, 25 8 Q 37 8, 37 16"
+      fill="none"
+      stroke="#C8A97E"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <!-- Die body -->
+    <rect
+      x="11" y="17" width="28" height="26" rx="4"
+      fill="none"
+      stroke="#C8A97E"
+      stroke-width="2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    <!-- 5 pips (corners + center) -->
+    <circle cx="18" cy="24" r="1.8" fill="#C8A97E"/>
+    <circle cx="32" cy="24" r="1.8" fill="#C8A97E"/>
+    <circle cx="25" cy="30" r="1.8" fill="#C8A97E"/>
+    <circle cx="18" cy="36" r="1.8" fill="#C8A97E"/>
+    <circle cx="32" cy="36" r="1.8" fill="#C8A97E"/>
+  </g>
+</svg>
