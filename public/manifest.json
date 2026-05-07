@@ -1,7 +1,7 @@
 {
-  "name": "yarinokoshi",
-  "short_name": "yarinokoshi",
-  "description": "things left to do — chicago before san diego",
+  "name": "pail",
+  "short_name": "pail",
+  "description": "things to do in chicago before san diego",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2A1F2E",

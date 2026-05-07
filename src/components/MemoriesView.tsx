@@ -46,14 +46,38 @@ export function MemoriesView({ items, onSelect }: MemoriesViewProps) {
         >
           <div
             style={{
-              fontFamily: "'Noto Serif JP', serif",
-              fontSize: 32,
-              color: theme.brass,
-              opacity: 0.4,
-              marginBottom: 16
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: 18,
+              opacity: 0.5
             }}
           >
-            記
+            <svg viewBox="0 0 100 100" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+              {/* Pail with check inside */}
+              <path
+                d="M 28 32 Q 28 18, 50 18 Q 72 18, 72 32"
+                fill="none"
+                stroke={theme.brass}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 22 35 L 28 82 L 72 82 L 78 35 Z"
+                fill="none"
+                stroke={theme.brass}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 38 58 L 47 67 L 64 48"
+                fill="none"
+                stroke={theme.brass}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <div
             style={{
@@ -136,7 +160,7 @@ function MemoryCard({
         {!item.memory_photo && (
           <div
             style={{
-              fontFamily: "'Noto Serif JP', serif",
+              fontFamily: "'Fraunces', serif",
               fontSize: 36,
               color: theme.brass,
               opacity: 0.3

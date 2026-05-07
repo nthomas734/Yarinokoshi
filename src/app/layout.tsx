@@ -2,13 +2,22 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'yarinokoshi',
-  description: 'things left to do — chicago before san diego',
+  title: 'pail',
+  description: 'things to do in chicago before san diego',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ]
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'yarinokoshi'
+    title: 'pail'
   }
 };
 
@@ -27,11 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;400&family=Geist+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600&family=Noto+Serif+JP:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;400&family=Geist+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600&display=swap"
           rel="stylesheet"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body>{children}</body>
     </html>

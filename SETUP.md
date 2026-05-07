@@ -1,6 +1,8 @@
-# yarinokoshi — Setup Guide
+# pail — Setup Guide
 
-Same flow as daizu. About 15 minutes end-to-end.
+> If you're upgrading from yarinokoshi, see [UPDATE.md](./UPDATE.md) instead — much shorter.
+
+About 15 minutes end-to-end for a fresh deploy.
 
 ## What you'll do
 
@@ -14,11 +16,11 @@ Same flow as daizu. About 15 minutes end-to-end.
 ## Step 1 — GitHub
 
 1. Go to https://github.com/new
-2. Repo name: `yarinokoshi` (or whatever you want)
+2. Repo name: `pail` (or whatever you want)
 3. Make it Private
 4. Click **Create repository**
-5. On the empty repo page, click **uploading an existing file** (or drag-and-drop the unzipped folder contents into the page)
-6. Drag every file from this zip into GitHub. **Important:** drag the contents, not the outer `yarinokoshi` folder itself. You should see `package.json`, `next.config.js`, `src/`, `public/` etc. at the repo root.
+5. On the empty repo page, click **uploading an existing file**
+6. Drag every file from this zip into GitHub. **Important:** drag the contents, not the outer `pail` folder itself. You should see `package.json`, `next.config.js`, `src/`, `public/` etc. at the repo root.
 7. Scroll down → **Commit changes**
 
 ---
@@ -26,9 +28,9 @@ Same flow as daizu. About 15 minutes end-to-end.
 ## Step 2 — Supabase
 
 1. Go to https://supabase.com/dashboard and click **New project**
-2. Name it `yarinokoshi`
-3. Pick a strong database password and save it (you won't need it for the app, but you'll need it later if you ever want raw DB access)
-4. Region: pick the one closest to you
+2. Name it `pail`
+3. Pick a strong database password and save it
+4. Region: closest to you
 5. Click **Create new project** and wait ~2 minutes
 
 ### Run the schema
@@ -38,7 +40,7 @@ Same flow as daizu. About 15 minutes end-to-end.
 3. Paste the entire block below and click **Run**:
 
 ```sql
--- yarinokoshi schema
+-- pail schema
 create extension if not exists "uuid-ossp";
 
 create table if not exists items (
@@ -56,8 +58,6 @@ create table if not exists items (
   created_at timestamptz not null default now()
 );
 
--- Enable Row Level Security but allow anon read/write
--- (this is a private app for two people, anon key is acceptable)
 alter table items enable row level security;
 
 create policy "anon can read" on items for select using (true);
@@ -73,47 +73,44 @@ You should see **Success. No rows returned.**
 1. Click **Storage** in the left sidebar
 2. Click **New bucket**
 3. Name: `memories`
-4. Toggle **Public bucket** to ON (so the photos can render in the app)
+4. Toggle **Public bucket** to ON
 5. Click **Create bucket**
 
-Then add a policy so the app can upload:
+Then add an upload policy:
 
 1. Click into the `memories` bucket
 2. Click **Policies** tab at the top
 3. Click **New policy** → **For full customization**
 4. Policy name: `anon can upload`
 5. Allowed operation: check **INSERT**
-6. Target roles: leave as `public` (default — this means the anon key works)
+6. Target roles: leave as `public`
 7. WITH CHECK expression: `true`
 8. Click **Review** → **Save policy**
-
-Repeat for read access if needed:
-- Most public buckets allow public reads automatically. If photos don't load, add another policy for SELECT with `true`.
 
 ### Get your keys
 
 1. Click **Project Settings** (gear icon, bottom left)
-2. Click **API** in the left sub-menu
-3. You need two values from this page:
-   - **Project URL** (under "Project URL")
-   - **anon public** key (under "Project API keys" → look for the row labeled `anon` `public`)
-4. Keep this tab open — you'll paste them into Vercel next
+2. Click **API Keys** in the left sub-menu
+3. Copy:
+   - **Project URL** — should look like `https://abc123xyz.supabase.co` (NOT the REST endpoint with `/rest/v1/` — just the bare URL with no path)
+   - **anon public** key — a long string starting with `eyJ`
 
 ---
 
 ## Step 3 — Vercel
 
 1. Go to https://vercel.com/new
-2. Import your `yarinokoshi` GitHub repo (you may need to grant Vercel access to it)
-3. **Before** clicking Deploy, expand **Environment Variables** and add:
+2. Import your `pail` GitHub repo
+3. **Critical:** make sure Framework Preset shows **Next.js** before deploying
+4. Expand **Environment Variables** and add:
 
    | Name | Value |
    |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | (paste Project URL from Supabase) |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste anon public key from Supabase) |
+   | `NEXT_PUBLIC_SUPABASE_URL` | (paste Project URL — bare URL, no `/rest/v1/`) |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | (paste anon public key) |
 
-4. Click **Deploy**
-5. Wait ~2 minutes. You'll get a URL like `yarinokoshi-xyz.vercel.app`
+5. Click **Deploy**
+6. Wait ~2 minutes
 
 ---
 
@@ -121,9 +118,10 @@ Repeat for read access if needed:
 
 ### iPhone
 1. Open the Vercel URL in **Safari** (not Chrome — only Safari can install PWAs on iOS)
-2. Tap the share icon (square with arrow up)
-3. Scroll down → **Add to Home Screen**
-4. Tap **Add**
+2. **Important on iPhone:** if the page 404s, turn off iCloud Private Relay temporarily (Settings → [your name] → iCloud → Private Relay → off)
+3. Tap the share icon
+4. Scroll down → **Add to Home Screen**
+5. Tap **Add**
 
 ### Android
 1. Open the URL in Chrome
@@ -136,52 +134,30 @@ Repeat for read access if needed:
 The app silently tracks who added/completed each item. To turn this on for a specific phone, open the browser console once on that phone and run:
 
 ```javascript
-localStorage.setItem('yarinokoshi_user', 'nathan')
+localStorage.setItem('pail_user', 'nathan')
 ```
 
 Or for your wife's phone:
 ```javascript
-localStorage.setItem('yarinokoshi_user', 'her_name')
+localStorage.setItem('pail_user', 'her_name')
 ```
 
-This is optional — the app works fine without it. Attribution is stored but not shown in the UI by default. If you ever want to show it, ping the next chat and we can add a toggle.
-
-(If you don't want to mess with the console, we can also add a one-time "who is this?" prompt in a future update.)
+This is optional. Attribution is stored but not shown in the UI by default.
 
 ---
 
-## Troubleshooting
+## Common gotchas
 
-**Vercel deploy fails with a security warning about React versions:** the package.json in this zip already pins to the safe versions (next 15.5.7, react 19.2.1). If you see this, double-check that GitHub actually has the package.json from this zip, not an older one.
-
-**"Cannot find module '@supabase/supabase-js'":** Vercel didn't install dependencies. Trigger a redeploy from the Vercel dashboard.
-
-**Items don't appear after adding:** Check that the Supabase SQL ran successfully and that your env vars in Vercel exactly match the Supabase URL and anon key (no trailing spaces).
-
-**Photos won't upload:** Check that the `memories` bucket exists, is public, and has the INSERT policy described above.
-
-**The page is blank:** Open the browser console (Safari → Develop → [device]) and look for the error. Most likely the env vars are missing or wrong.
+- **404 NOT_FOUND on Vercel after deploy:** Framework Preset wasn't set to Next.js. Fix it in Settings → General → Build & Development Settings, then redeploy.
+- **"INVALID PATH SPECIFIED IN REQUEST URL" when adding items:** You pasted the REST endpoint (`https://....supabase.co/rest/v1/`) into `NEXT_PUBLIC_SUPABASE_URL` instead of the bare Project URL. Fix it and redeploy.
+- **Page 404s on iPhone but works on desktop:** iCloud Private Relay. Toggle it off.
+- **Photos won't upload:** Check that the `memories` bucket exists, is public, and has the INSERT policy described above.
 
 ---
 
-## What's in v1
+## Tech notes
 
-- **Board view** — all items with category filters, status badges, flap-text status animation
-- **Timeline view** — 17-month layout from now to September 2027, items dropped into their time windows
-- **Memories view** — photo grid of completed items
-- **Add item** — floating + button, modal with title / category / time window / optional notes
-- **Item detail** — tap any row, change status, attach photo + memory note when departed
-- **Subtle countdown** — bottom of board, shows days remaining to San Diego
-- **Bottom tab bar + horizontal swipe** to switch views
-- **PWA** — installs to home screen on iOS and Android
-
-## What's not in v1 (could be added later)
-
-- "Who added what" attribution displayed in UI
-- Push notifications when partner adds something
-- Categories beyond the 9 built in
-- Custom time windows (e.g. "first weekend of June 2027")
-- Sharing memories outside the app
-- Export to a printable list for the move
-
-Let me know what you want next once you've used it for a week.
+- All status values are stored as plain text strings: `someday`, `planned`, `soon`, `done`
+- All categories are stored as plain text: `neighborhood`, `museum`, `sport`, `road`, `seasonal`, `food`, `show`, `just`
+- Time windows: `any`, `spring`, `summer`, `fall`, `winter`, or 3-letter month codes (`jan`, `feb`, ...)
+- Memory photos are stored in the `memories` Supabase Storage bucket as `{item-id}-{timestamp}.{ext}`

@@ -44,7 +44,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
   async function changeStatus(newStatus: Status) {
     setUpdating(true);
     const completedBy = newStatus === 'done'
-      ? (typeof window !== 'undefined' ? localStorage.getItem('yarinokoshi_user') : null)
+      ? (typeof window !== 'undefined' ? localStorage.getItem('pail_user') : null)
       : null;
 
     const updates: Partial<Item> = {

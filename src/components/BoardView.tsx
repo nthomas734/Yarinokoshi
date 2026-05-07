@@ -138,7 +138,7 @@ export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
             textTransform: 'uppercase'
           }}
         >
-          loading bucket…
+          loading pail…
         </div>
       )}
 
@@ -325,14 +325,42 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
     >
       <div
         style={{
-          fontFamily: "'Noto Serif JP', serif",
-          fontSize: 32,
-          color: theme.brass,
-          opacity: 0.5,
-          marginBottom: 16
+          display: 'flex',
+          justifyContent: 'center',
+          marginBottom: 18,
+          opacity: 0.5
         }}
       >
-        {hasItems ? '空' : '始'}
+        <svg viewBox="0 0 100 100" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+          {/* Empty pail */}
+          <path
+            d="M 28 32 Q 28 18, 50 18 Q 72 18, 72 32"
+            fill="none"
+            stroke={theme.brass}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 22 35 L 28 82 L 72 82 L 78 35 Z"
+            fill="none"
+            stroke={theme.brass}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {hasItems && (
+            <line
+              x1="32"
+              y1="62"
+              x2="68"
+              y2="62"
+              stroke={theme.brass}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="3 4"
+            />
+          )}
+        </svg>
       </div>
       <div
         style={{
@@ -343,7 +371,7 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
           marginBottom: 8
         }}
       >
-        {hasItems ? 'nothing matches these filters' : 'the bucket is empty'}
+        {hasItems ? 'nothing matches these filters' : 'the pail is empty'}
       </div>
       <div
         style={{
@@ -372,7 +400,7 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
             fontWeight: 700
           }}
         >
-          + add to bucket
+          + add to pail
         </button>
       )}
     </div>

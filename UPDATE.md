@@ -1,68 +1,81 @@
-# Updating to v2
+# Updating to pail (v3)
 
-This is a refinement, not a rebuild. Drop in the new files, run one tiny SQL migration, and you're done.
+This is a rebranding of the existing yarinokoshi app. New name, new logo, new wordmark — but the data and Supabase setup are unchanged.
 
-## Step 1 — Migrate existing items in Supabase
+You can either:
+1. **Replace the existing GitHub repo** (faster — keeps the same Vercel project and URL)
+2. **Create a new GitHub repo** (cleaner — but you'll get a new URL and need to add the env vars again)
 
-You probably have a few test items in your `items` table with the old status names (`dreaming`, `scheduled`, etc.). Those won't render correctly with the new code. One-time fix:
+I'd recommend option 1 unless you want a clean break.
 
-1. Go to your Supabase project → **SQL Editor** → **New query**
-2. Paste and run:
+## Option 1: Replace files in existing repo (recommended)
 
-```sql
--- Migrate old status names to new ones
-update items set status = 'someday' where status = 'dreaming';
-update items set status = 'planned' where status = 'scheduled';
-update items set status = 'soon'    where status = 'boarding';
-update items set status = 'done'    where status = 'departed';
+1. Download this zip and unzip it
+2. In your existing yarinokoshi GitHub repo, delete the following files first (so the new ones land cleanly):
+   - `public/icon-192.png`
+   - `public/icon-512.png`
+   - (don't delete anything else — overwrites are fine)
+3. Click **Add file** → **Upload files**
+4. Drag every file from the unzipped `pail/` folder into GitHub
+5. GitHub will warn about overwrites — accept all
+6. Commit changes
 
--- Migrate old "fair" category (now folded into "road")
-update items set category = 'road' where category = 'fair';
+Vercel will auto-deploy in ~2 minutes. **You don't need to touch Supabase or env vars** — the database is the same.
 
--- Update the default for new rows
-alter table items alter column status set default 'someday';
-```
+After it deploys:
+- Open `yarinokoshi.vercel.app` (your existing URL still works)
+- The new logo, name, and tagline will appear
+- Your existing items are preserved
 
-You should see "Success" with a count of updated rows.
+## Optional: rename the Vercel project / URL
 
-## Step 2 — Replace files in GitHub
+If you want the URL to actually say `pail.vercel.app`:
 
-This zip contains the same file structure as v1, with edits to:
-- `src/lib/supabase.ts` — new status types, removed "fair" category
-- `src/lib/theme.ts` — renamed status color tokens
-- `src/components/BoardView.tsx` — added second filter strip (seasons), new statuses
-- `src/components/TimelineView.tsx` — items now show in only the next upcoming month (no duplicates)
-- `src/components/MemoriesView.tsx` — uses 'done' instead of 'departed'
-- `src/components/ItemDetailModal.tsx` — new status names throughout
-- `src/components/AddItemModal.tsx` — new "+ add another" button, bucket-themed wording
-- `SETUP.md`, `README.md` — updated documentation
+1. In Vercel → your project → Settings → General → scroll to "Project Name"
+2. Change it from `yarinokoshi` to `pail`
+3. Save
+4. Settings → Domains → claim `pail.vercel.app` if available (it might be taken)
+5. The old `yarinokoshi.vercel.app` will still work as an alias
 
-**Easiest approach:** in your GitHub repo, navigate into each changed file, click the pencil icon, replace its entire contents with the file from this zip, commit. Or:
+This is purely cosmetic. The app works fine on either URL.
 
-**Even easier:** delete the entire `src/` folder in GitHub (open it, click the dropdown next to "Add file" → there's no folder delete — so do it via individual files). Actually, easiest is:
+## Optional: rename the GitHub repo
 
-1. Download this zip, unzip it
-2. In your GitHub repo, click **Add file** → **Upload files**
-3. Drag every file from the unzipped `yarinokoshi/` folder in
-4. GitHub will ask "you're overwriting these files, continue?" — yes
-5. Commit changes
+1. GitHub repo → Settings → scroll down → Rename repository to `pail`
+2. Vercel will detect the new repo name automatically and reconnect
 
-Vercel auto-deploys from `main` in ~2 min.
+## Rehome the icon on your phone
 
-## What's new in v2
+Since the icon image changed:
+1. On your phone, delete the existing yarinokoshi home screen icon (long-press → Remove App)
+2. Open Safari, go to your URL
+3. Share → Add to Home Screen
+4. The new pail logo (Chicago skyline with handle) will appear on your home screen
 
-- **Status names:** dreaming → planned → soon → done (was: dreaming → scheduled → boarding → departed)
-- **Filter strip 2:** filter the board by season (any time / spring / summer / fall / winter) on top of category
-- **State Fairs category removed** — fold these into Road Trips or Seasonal
-- **Timeline:** an item with a "JUL" window now shows only in the *next* upcoming July, not in every July through 2027. Once that month passes, it rolls forward.
-- **+ Add another:** the add modal now has three buttons — Close, + Add Another (saves and clears form, keeps modal open), and + Add & Done. Category and time window are kept between adds since you're often adding similar items in a batch.
-- **Bucket-themed wording** throughout: "add to the bucket", "the bucket is empty", etc.
+## What changed
 
-## What hasn't changed
+- **Name:** yarinokoshi → pail
+- **Logo:** Hand-drawn brass-line Chicago skyline with bucket handle arching above (sister to daizu's bean mark)
+- **Wordmark:** "やり残し / yarinokoshi" → "pail" in Fraunces serif
+- **Tagline:** "things left to do" → "chicago, before we go"
+- **Empty states:** removed Japanese kanji (空, 始, 記), replaced with brass-line pail illustrations
+- **Copy:** "add to the bucket" → "add to the pail", "the bucket is empty" → "the pail is empty", etc.
+- **localStorage key:** `yarinokoshi_user` → `pail_user` (if you set one of these for attribution, you'll need to set it again — see SETUP.md)
+- **Removed:** Noto Serif JP font dependency
 
-- Env vars (still `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-- Supabase schema columns (only the default value of `status` changed)
-- Storage bucket name (`memories`)
-- PWA manifest, icons, palette, fonts
+## What didn't change
 
-You don't need to redeploy manually — Vercel will see the new commits to `main` and deploy automatically. Just hard-refresh the app on your phone after ~2 minutes.
+- Supabase schema, env vars, storage bucket
+- Categories, statuses, time windows
+- All your existing items and memories
+- Filter behavior, timeline behavior, add-another flow
+- Aubergine/brass palette
+- Bottom tab bar + swipe navigation
+- Subtle countdown to San Diego
+
+## What's not in this update (could come later)
+
+- A real domain (`pail.app` etc.)
+- Splash screen with logo animation on PWA launch
+- Logo flip-in animation on first load (similar to daizu's Japanese-to-English flip)
+- Attribution display in UI

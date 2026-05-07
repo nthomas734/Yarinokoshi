@@ -57,7 +57,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
     setError(null);
 
     const addedBy = typeof window !== 'undefined'
-      ? localStorage.getItem('yarinokoshi_user') || null
+      ? localStorage.getItem('pail_user') || null
       : null;
 
     const savedTitle = title.trim();
@@ -152,7 +152,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
             marginBottom: justAdded ? 12 : 22
           }}
         >
-          add to the bucket
+          add to the pail
         </div>
 
         {justAdded && (
