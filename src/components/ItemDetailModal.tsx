@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
+  SEASONS,
   STATUS_LABELS,
-  TIME_WINDOW_LABELS,
   supabase,
+  timeWindowLabel,
+  type Category,
   type Item,
+  type Season,
   type Status
 } from '@/lib/supabase';
 
@@ -27,6 +30,19 @@ const STATUS_COLORS: Record<Status, string> = {
 const STATUSES: Status[] = ['someday', 'planned', 'soon', 'done'];
 
 export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalProps) {
+  const [editMode, setEditMode] = useState(false);
+
+  // Edit form state (initialized from item)
+  const [editTitle, setEditTitle] = useState(item.title);
+  const [editCategory, setEditCategory] = useState<Category>(item.category);
+  const [editSeasons, setEditSeasons] = useState<Set<Season>>(new Set(item.seasons || []));
+  const [editShowDateRange, setEditShowDateRange] = useState(!!item.date_start);
+  const [editDateStart, setEditDateStart] = useState(item.date_start ?? '');
+  const [editDateEnd, setEditDateEnd] = useState(item.date_end ?? '');
+  const [editNotes, setEditNotes] = useState(item.notes ?? '');
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Memory log state
   const [memoryNote, setMemoryNote] = useState(item.memory_note ?? '');
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(item.memory_photo);
@@ -102,6 +118,51 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
     onUpdated();
   }
 
+  async function saveEdits() {
+    if (!editTitle.trim()) {
+      setEditError('title is required');
+      return;
+    }
+    if (editShowDateRange && editDateStart && editDateEnd && editDateEnd < editDateStart) {
+      setEditError('end date must be after start date');
+      return;
+    }
+    setUpdating(true);
+    setEditError(null);
+
+    const { error } = await supabase.from('items').update({
+      title: editTitle.trim(),
+      category: editCategory,
+      seasons: Array.from(editSeasons),
+      date_start: editShowDateRange && editDateStart ? editDateStart : null,
+      date_end: editShowDateRange && editDateEnd ? editDateEnd : (editShowDateRange && editDateStart ? editDateStart : null),
+      notes: editNotes.trim() || null
+    }).eq('id', item.id);
+
+    setUpdating(false);
+
+    if (error) {
+      setEditError(error.message);
+      return;
+    }
+
+    setEditMode(false);
+    onUpdated();
+  }
+
+  function cancelEdit() {
+    // Reset edits to current item values
+    setEditTitle(item.title);
+    setEditCategory(item.category);
+    setEditSeasons(new Set(item.seasons || []));
+    setEditShowDateRange(!!item.date_start);
+    setEditDateStart(item.date_start ?? '');
+    setEditDateEnd(item.date_end ?? '');
+    setEditNotes(item.notes ?? '');
+    setEditError(null);
+    setEditMode(false);
+  }
+
   const isDone = item.status === 'done';
 
   return (
@@ -143,289 +204,624 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
           }}
         />
 
-        {/* Title block */}
-        <div style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 9,
-              letterSpacing: '0.2em',
-              color: theme.brass,
-              textTransform: 'uppercase',
-              opacity: 0.7,
-              marginBottom: 6
-            }}
-          >
-            {cat?.label} · {TIME_WINDOW_LABELS[item.time_window]}
-          </div>
-          <div
-            style={{
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              color: theme.tileText,
-              textTransform: 'uppercase',
-              lineHeight: 1.3
-            }}
-          >
-            {item.title}
-          </div>
-          {item.notes && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: 12,
-                background: theme.surface,
-                borderRadius: 4,
-                fontFamily: "'Manrope', sans-serif",
-                fontSize: 13,
-                color: theme.cream,
-                opacity: 0.85,
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap'
-              }}
-            >
-              {item.notes}
-            </div>
-          )}
-        </div>
-
-        {/* Status selector */}
-        <div
-          style={{
-            fontFamily: "'Geist Mono', monospace",
-            fontSize: 9,
-            letterSpacing: '0.2em',
-            color: theme.brass,
-            opacity: 0.65,
-            marginBottom: 8,
-            textTransform: 'uppercase'
-          }}
-        >
-          status
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 4,
-            marginBottom: 20
-          }}
-        >
-          {STATUSES.map(s => {
-            const active = item.status === s;
-            return (
+        {!editMode ? (
+          // ============ READ MODE ============
+          <>
+            {/* Title block with edit button */}
+            <div style={{ marginBottom: 20, position: 'relative' }}>
               <button
-                key={s}
-                onClick={() => changeStatus(s)}
-                disabled={updating}
-                style={{
-                  padding: '10px 4px',
-                  background: active ? STATUS_COLORS[s] : theme.surface,
-                  border: `1px solid ${active ? STATUS_COLORS[s] : theme.dimmer}`,
-                  borderRadius: 3,
-                  color: active ? theme.board : STATUS_COLORS[s],
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: 9,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  fontWeight: active ? 700 : 400,
-                  opacity: updating ? 0.5 : 1
-                }}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Memory log (always editable, shown more prominently if done) */}
-        <div
-          style={{
-            padding: 14,
-            border: `1px solid ${isDone ? theme.brass : theme.dimmer}`,
-            borderRadius: 4,
-            marginBottom: 16,
-            background: isDone ? 'rgba(200, 169, 126, 0.04)' : 'transparent'
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 9,
-              letterSpacing: '0.2em',
-              color: theme.brass,
-              opacity: 0.85,
-              marginBottom: 10,
-              textTransform: 'uppercase'
-            }}
-          >
-            memory log {isDone && '✓'}
-          </div>
-
-          {photoUrl ? (
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '4 / 3',
-                background: `url(${photoUrl}) center / cover no-repeat`,
-                borderRadius: 4,
-                marginBottom: 10,
-                position: 'relative'
-              }}
-            >
-              <button
-                onClick={() => setPhotoUrl(null)}
+                onClick={() => setEditMode(true)}
                 style={{
                   position: 'absolute',
-                  top: 6,
-                  right: 6,
-                  background: 'rgba(0,0,0,0.7)',
-                  color: theme.cream,
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  borderRadius: 2,
+                  top: 0,
+                  right: 0,
                   fontFamily: "'Geist Mono', monospace",
-                  letterSpacing: '0.1em',
+                  fontSize: 9,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  padding: '6px 12px',
+                  border: `1px solid ${theme.brass}`,
+                  borderRadius: 3,
+                  color: theme.brass,
+                  background: 'transparent',
+                  fontWeight: 600
+                }}
+              >
+                edit
+              </button>
+              <div
+                style={{
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 9,
+                  letterSpacing: '0.2em',
+                  color: theme.brass,
+                  textTransform: 'uppercase',
+                  opacity: 0.7,
+                  marginBottom: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingRight: 70
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: cat?.color ?? theme.brass
+                  }}
+                />
+                {cat?.label} · {timeWindowLabel(item)}
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  color: theme.tileText,
+                  textTransform: 'uppercase',
+                  lineHeight: 1.3,
+                  paddingRight: 70
+                }}
+              >
+                {item.title}
+              </div>
+              {item.notes && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 12,
+                    background: theme.surface,
+                    borderRadius: 4,
+                    fontFamily: "'Manrope', sans-serif",
+                    fontSize: 13,
+                    color: theme.cream,
+                    opacity: 0.85,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
+                  {item.notes}
+                </div>
+              )}
+            </div>
+
+            {/* Status selector */}
+            <Label>status</Label>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 4,
+                marginBottom: 20
+              }}
+            >
+              {STATUSES.map(s => {
+                const active = item.status === s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => changeStatus(s)}
+                    disabled={updating}
+                    style={{
+                      padding: '10px 4px',
+                      background: active ? STATUS_COLORS[s] : theme.surface,
+                      border: `1px solid ${active ? STATUS_COLORS[s] : theme.dimmer}`,
+                      borderRadius: 3,
+                      color: active ? theme.board : STATUS_COLORS[s],
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: 9,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      fontWeight: active ? 700 : 400,
+                      opacity: updating ? 0.5 : 1
+                    }}
+                  >
+                    {STATUS_LABELS[s]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Memory log */}
+            <div
+              style={{
+                padding: 14,
+                border: `1px solid ${isDone ? theme.brass : theme.dimmer}`,
+                borderRadius: 4,
+                marginBottom: 16,
+                background: isDone ? 'rgba(200, 169, 126, 0.04)' : 'transparent'
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 9,
+                  letterSpacing: '0.2em',
+                  color: theme.brass,
+                  opacity: 0.85,
+                  marginBottom: 10,
                   textTransform: 'uppercase'
                 }}
               >
-                remove
+                memory log {isDone && '✓'}
+              </div>
+
+              {photoUrl ? (
+                <div
+                  style={{
+                    width: '100%',
+                    aspectRatio: '4 / 3',
+                    background: `url(${photoUrl}) center / cover no-repeat`,
+                    borderRadius: 4,
+                    marginBottom: 10,
+                    position: 'relative'
+                  }}
+                >
+                  <button
+                    onClick={() => setPhotoUrl(null)}
+                    style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      background: 'rgba(0,0,0,0.7)',
+                      color: theme.cream,
+                      fontSize: 11,
+                      padding: '4px 8px',
+                      borderRadius: 2,
+                      fontFamily: "'Geist Mono', monospace",
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={photoUploading}
+                  style={{
+                    width: '100%',
+                    padding: '20px',
+                    background: theme.surface,
+                    border: `1px dashed ${theme.dimmer}`,
+                    borderRadius: 4,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 10,
+                    letterSpacing: '0.15em',
+                    color: theme.dim,
+                    textTransform: 'uppercase',
+                    marginBottom: 10
+                  }}
+                >
+                  {photoUploading ? 'uploading…' : '+ add photo (optional)'}
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadPhoto(f);
+                }}
+              />
+
+              <textarea
+                value={memoryNote}
+                onChange={(e) => setMemoryNote(e.target.value)}
+                placeholder="one line about how it went…"
+                rows={2}
+                style={{
+                  width: '100%',
+                  background: theme.surface,
+                  border: `1px solid ${theme.dimmer}`,
+                  borderRadius: 4,
+                  padding: '10px 12px',
+                  fontFamily: "'Manrope', sans-serif",
+                  fontSize: 13,
+                  color: theme.cream,
+                  resize: 'none',
+                  lineHeight: 1.5
+                }}
+              />
+
+              {(memoryNote !== (item.memory_note ?? '') || photoUrl !== item.memory_photo) && (
+                <button
+                  onClick={saveMemory}
+                  disabled={updating}
+                  style={{
+                    marginTop: 10,
+                    width: '100%',
+                    padding: '10px 0',
+                    background: theme.brass,
+                    color: theme.board,
+                    borderRadius: 3,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 10,
+                    letterSpacing: '0.15em',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    opacity: updating ? 0.5 : 1
+                  }}
+                >
+                  save memory
+                </button>
+              )}
+            </div>
+
+            {/* Delete + close */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{
+                    padding: '12px 0',
+                    border: `1px solid ${theme.dimmer}`,
+                    borderRadius: 3,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 10,
+                    letterSpacing: '0.15em',
+                    color: '#d97a7a',
+                    textTransform: 'uppercase',
+                    opacity: 0.8
+                  }}
+                >
+                  delete
+                </button>
+              ) : (
+                <button
+                  onClick={deleteItem}
+                  disabled={updating}
+                  style={{
+                    padding: '12px 0',
+                    border: `1px solid #d97a7a`,
+                    background: '#d97a7a',
+                    color: theme.board,
+                    borderRadius: 3,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 10,
+                    letterSpacing: '0.15em',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  confirm delete
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '12px 0',
+                  background: theme.surface,
+                  border: `1px solid ${theme.dimmer}`,
+                  borderRadius: 3,
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 10,
+                  letterSpacing: '0.15em',
+                  color: theme.cream,
+                  textTransform: 'uppercase'
+                }}
+              >
+                close
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={photoUploading}
+          </>
+        ) : (
+          // ============ EDIT MODE ============
+          <>
+            <div
+              style={{
+                fontFamily: "'Geist Mono', monospace",
+                fontSize: 10,
+                letterSpacing: '0.2em',
+                color: theme.brass,
+                textTransform: 'uppercase',
+                marginBottom: 4,
+                opacity: 0.7
+              }}
+            >
+              editing
+            </div>
+            <div
+              style={{
+                fontFamily: "'Fraunces', serif",
+                fontWeight: 300,
+                fontSize: 22,
+                color: theme.cream,
+                marginBottom: 22
+              }}
+            >
+              update item
+            </div>
+
+            <Label>title</Label>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              autoFocus
               style={{
                 width: '100%',
-                padding: '20px',
                 background: theme.surface,
-                border: `1px dashed ${theme.dimmer}`,
-                borderRadius: 4,
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: 10,
-                letterSpacing: '0.15em',
-                color: theme.dim,
-                textTransform: 'uppercase',
-                marginBottom: 10
-              }}
-            >
-              {photoUploading ? 'uploading…' : '+ add photo (optional)'}
-            </button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadPhoto(f);
-            }}
-          />
-
-          <textarea
-            value={memoryNote}
-            onChange={(e) => setMemoryNote(e.target.value)}
-            placeholder="one line about how it went…"
-            rows={2}
-            style={{
-              width: '100%',
-              background: theme.surface,
-              border: `1px solid ${theme.dimmer}`,
-              borderRadius: 4,
-              padding: '10px 12px',
-              fontFamily: "'Manrope', sans-serif",
-              fontSize: 13,
-              color: theme.cream,
-              resize: 'none',
-              lineHeight: 1.5
-            }}
-          />
-
-          {(memoryNote !== (item.memory_note ?? '') || photoUrl !== item.memory_photo) && (
-            <button
-              onClick={saveMemory}
-              disabled={updating}
-              style={{
-                marginTop: 10,
-                width: '100%',
-                padding: '10px 0',
-                background: theme.brass,
-                color: theme.board,
-                borderRadius: 3,
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: 10,
-                letterSpacing: '0.15em',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                opacity: updating ? 0.5 : 1
-              }}
-            >
-              save memory
-            </button>
-          )}
-        </div>
-
-        {/* Delete + close */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              style={{
-                padding: '12px 0',
                 border: `1px solid ${theme.dimmer}`,
-                borderRadius: 3,
+                borderRadius: 4,
+                padding: '12px 12px',
+                fontFamily: "'Geist Mono', monospace",
+                fontSize: 13,
+                letterSpacing: '0.04em',
+                color: theme.tileText,
+                textTransform: 'uppercase',
+                marginBottom: 18
+              }}
+            />
+
+            <Label>category</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 18 }}>
+              {CATEGORIES.map(c => {
+                const active = editCategory === c.code;
+                return (
+                  <button
+                    key={c.code}
+                    onClick={() => setEditCategory(c.code)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: 10,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      padding: '10px 12px',
+                      border: `1px solid ${active ? theme.brass : theme.dimmer}`,
+                      borderRadius: 3,
+                      color: active ? theme.cream : theme.dim,
+                      background: active ? 'rgba(200, 169, 126, 0.12)' : 'transparent',
+                      fontWeight: active ? 600 : 400,
+                      textAlign: 'left'
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: '50%',
+                        background: c.color,
+                        opacity: active ? 1 : 0.5,
+                        flexShrink: 0
+                      }}
+                    />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Label>season tags</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+              {SEASONS.map(s => {
+                const active = editSeasons.has(s.code);
+                return (
+                  <button
+                    key={s.code}
+                    onClick={() => {
+                      setEditSeasons(prev => {
+                        const next = new Set(prev);
+                        if (next.has(s.code)) next.delete(s.code); else next.add(s.code);
+                        return next;
+                      });
+                    }}
+                    style={{
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: 9,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      padding: '8px 10px',
+                      border: `1px solid ${active ? theme.brass : theme.dimmer}`,
+                      borderRadius: 3,
+                      color: active ? theme.board : theme.cream,
+                      background: active ? theme.brass : 'transparent',
+                      fontWeight: active ? 700 : 400
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setEditShowDateRange(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 0',
+                marginBottom: 12,
+                background: 'transparent',
+                border: 'none',
+                color: theme.brass,
                 fontFamily: "'Geist Mono', monospace",
                 fontSize: 10,
                 letterSpacing: '0.15em',
-                color: '#d97a7a',
                 textTransform: 'uppercase',
                 opacity: 0.8
               }}
             >
-              delete
+              <span style={{ fontSize: 14, lineHeight: 1, width: 14 }}>{editShowDateRange ? '−' : '+'}</span>
+              specific date / range
             </button>
-          ) : (
-            <button
-              onClick={deleteItem}
-              disabled={updating}
+
+            {editShowDateRange && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 8,
+                  marginBottom: 18,
+                  padding: 12,
+                  background: theme.surface,
+                  borderRadius: 4,
+                  border: `1px solid ${theme.dimmer}`
+                }}
+              >
+                <div>
+                  <div style={{
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 8,
+                    letterSpacing: '0.15em',
+                    color: theme.dim,
+                    textTransform: 'uppercase',
+                    marginBottom: 4
+                  }}>
+                    from
+                  </div>
+                  <input
+                    type="date"
+                    value={editDateStart}
+                    onChange={(e) => setEditDateStart(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: theme.bg,
+                      border: `1px solid ${theme.dimmer}`,
+                      borderRadius: 3,
+                      padding: '8px 10px',
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: 11,
+                      color: theme.cream,
+                      colorScheme: 'dark'
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: 8,
+                    letterSpacing: '0.15em',
+                    color: theme.dim,
+                    textTransform: 'uppercase',
+                    marginBottom: 4
+                  }}>
+                    to (optional)
+                  </div>
+                  <input
+                    type="date"
+                    value={editDateEnd}
+                    onChange={(e) => setEditDateEnd(e.target.value)}
+                    min={editDateStart || undefined}
+                    style={{
+                      width: '100%',
+                      background: theme.bg,
+                      border: `1px solid ${theme.dimmer}`,
+                      borderRadius: 3,
+                      padding: '8px 10px',
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: 11,
+                      color: theme.cream,
+                      colorScheme: 'dark'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <Label>notes</Label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              rows={3}
               style={{
-                padding: '12px 0',
-                border: `1px solid #d97a7a`,
-                background: '#d97a7a',
-                color: theme.board,
-                borderRadius: 3,
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: 10,
-                letterSpacing: '0.15em',
-                fontWeight: 700,
-                textTransform: 'uppercase'
+                width: '100%',
+                background: theme.surface,
+                border: `1px solid ${theme.dimmer}`,
+                borderRadius: 4,
+                padding: '10px 12px',
+                fontFamily: "'Manrope', sans-serif",
+                fontSize: 13,
+                color: theme.cream,
+                resize: 'none',
+                marginBottom: 18,
+                lineHeight: 1.5
               }}
-            >
-              confirm delete
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            style={{
-              padding: '12px 0',
-              background: theme.surface,
-              border: `1px solid ${theme.dimmer}`,
-              borderRadius: 3,
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: 10,
-              letterSpacing: '0.15em',
-              color: theme.cream,
-              textTransform: 'uppercase'
-            }}
-          >
-            close
-          </button>
-        </div>
+            />
+
+            {editError && (
+              <div
+                style={{
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 10,
+                  color: '#d97a7a',
+                  marginBottom: 12,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {editError}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+              <button
+                onClick={cancelEdit}
+                style={{
+                  padding: '14px 0',
+                  border: `1px solid ${theme.dimmer}`,
+                  borderRadius: 3,
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 10,
+                  letterSpacing: '0.15em',
+                  color: theme.cream,
+                  textTransform: 'uppercase',
+                  opacity: 0.8
+                }}
+              >
+                cancel
+              </button>
+              <button
+                onClick={saveEdits}
+                disabled={updating}
+                style={{
+                  padding: '14px 0',
+                  background: theme.brass,
+                  color: theme.board,
+                  borderRadius: 3,
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 10,
+                  letterSpacing: '0.15em',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  opacity: updating ? 0.5 : 1
+                }}
+              >
+                {updating ? 'saving…' : 'save changes'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: "'Geist Mono', monospace",
+        fontSize: 9,
+        letterSpacing: '0.2em',
+        color: theme.brass,
+        opacity: 0.65,
+        marginBottom: 6,
+        textTransform: 'uppercase'
+      }}
+    >
+      {children}
     </div>
   );
 }

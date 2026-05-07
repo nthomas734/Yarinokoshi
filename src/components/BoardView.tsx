@@ -6,11 +6,11 @@ import {
   CATEGORIES,
   STATUS_LABELS,
   STATUS_ORDER,
-  TIME_WINDOW_LABELS,
+  timeWindowLabel,
   type Category,
   type Item,
-  type Status,
-  type TimeWindow
+  type Season,
+  type Status
 } from '@/lib/supabase';
 import { FlapText } from './FlapText';
 
@@ -19,6 +19,10 @@ interface BoardViewProps {
   loading: boolean;
   onSelect: (item: Item) => void;
   onAdd: () => void;
+  catFilter: 'all' | Category;
+  setCatFilter: (c: 'all' | Category) => void;
+  timeFilter: 'all' | Season;
+  setTimeFilter: (t: 'all' | Season) => void;
 }
 
 const STATUS_COLORS: Record<Status, string> = {
@@ -28,9 +32,7 @@ const STATUS_COLORS: Record<Status, string> = {
   done:    theme.done
 };
 
-type TimeFilter = 'all' | 'spring' | 'summer' | 'fall' | 'winter';
-
-const SEASON_FILTERS: { code: TimeFilter; label: string }[] = [
+const SEASON_FILTERS: { code: 'all' | Season; label: string }[] = [
   { code: 'all',    label: 'any time' },
   { code: 'spring', label: 'spring' },
   { code: 'summer', label: 'summer' },
@@ -38,16 +40,16 @@ const SEASON_FILTERS: { code: TimeFilter; label: string }[] = [
   { code: 'winter', label: 'winter' }
 ];
 
-const SEASON_TO_MONTHS: Record<string, TimeWindow[]> = {
-  spring: ['mar', 'apr', 'may'],
-  summer: ['jun', 'jul', 'aug'],
-  fall:   ['sep', 'oct', 'nov'],
-  winter: ['dec', 'jan', 'feb']
-};
-
-export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
-  const [catFilter, setCatFilter] = useState<'all' | Category>('all');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+export function BoardView({
+  items,
+  loading,
+  onSelect,
+  onAdd,
+  catFilter,
+  setCatFilter,
+  timeFilter,
+  setTimeFilter
+}: BoardViewProps) {
 
   const totalsByCategory = useMemo(() => {
     const counts: Record<string, number> = { all: items.length };
@@ -60,11 +62,10 @@ export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
     let base = catFilter === 'all' ? items : items.filter(i => i.category === catFilter);
 
     if (timeFilter !== 'all') {
-      const seasonMonths = SEASON_TO_MONTHS[timeFilter] ?? [];
-      base = base.filter(i =>
-        i.time_window === timeFilter ||
-        seasonMonths.includes(i.time_window as TimeWindow)
-      );
+      base = base.filter(i => {
+        // Item matches season filter if it has the season tagged OR has any season AND no specific date
+        return (i.seasons || []).includes(timeFilter);
+      });
     }
 
     return base.slice().sort((a, b) => {
@@ -99,6 +100,7 @@ export function BoardView({ items, loading, onSelect, onAdd }: BoardViewProps) {
             onClick={() => setCatFilter(c.code)}
             label={c.label}
             count={totalsByCategory[c.code] ?? 0}
+            dotColor={c.color}
           />
         ))}
       </div>
@@ -194,19 +196,24 @@ function FilterPill({
   onClick,
   label,
   count,
-  subtle
+  subtle,
+  dotColor
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count?: number;
   subtle?: boolean;
+  dotColor?: string;
 }) {
   return (
     <button
       onClick={onClick}
       style={{
         flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
         fontFamily: "'Geist Mono', monospace",
         fontSize: 9,
         letterSpacing: '0.1em',
@@ -221,9 +228,21 @@ function FilterPill({
         transition: 'all 0.15s ease'
       }}
     >
+      {dotColor && (
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: active ? theme.board : dotColor,
+            opacity: active ? 0.7 : 1,
+            flexShrink: 0
+          }}
+        />
+      )}
       {label}
       {count !== undefined && (
-        <span style={{ marginLeft: 4, opacity: active ? 0.7 : 0.6 }}>{count}</span>
+        <span style={{ opacity: active ? 0.7 : 0.6 }}>{count}</span>
       )}
     </button>
   );
@@ -240,6 +259,7 @@ function Row({
 }) {
   const cat = CATEGORIES.find(c => c.code === item.category);
   const accent = STATUS_COLORS[item.status];
+  const catColor = cat?.color ?? theme.brass;
 
   return (
     <button
@@ -264,18 +284,38 @@ function Row({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: "'Geist Mono', monospace",
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: '0.04em',
-            color: theme.tileText,
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: 0
           }}
         >
-          {item.title}
+          {/* Category color dot */}
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: catColor,
+              flexShrink: 0
+            }}
+            aria-hidden="true"
+          />
+          <div
+            style={{
+              fontFamily: "'Geist Mono', monospace",
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: '0.04em',
+              color: theme.tileText,
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {item.title}
+          </div>
         </div>
         <div
           style={{
@@ -284,11 +324,12 @@ function Row({
             fontFamily: "'Geist Mono', monospace",
             fontSize: 9,
             letterSpacing: '0.1em',
-            textTransform: 'uppercase'
+            textTransform: 'uppercase',
+            paddingLeft: 15
           }}
         >
           <span style={{ color: theme.brass }}>{cat?.label ?? item.category}</span>
-          <span style={{ color: theme.dim }}>{TIME_WINDOW_LABELS[item.time_window]}</span>
+          <span style={{ color: theme.dim }}>{timeWindowLabel(item)}</span>
         </div>
       </div>
       <div
@@ -332,7 +373,6 @@ function EmptyState({ onAdd, hasItems }: { onAdd: () => void; hasItems: boolean 
         }}
       >
         <svg viewBox="0 0 100 100" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
-          {/* Empty pail */}
           <path
             d="M 28 32 Q 28 18, 50 18 Q 72 18, 72 32"
             fill="none"

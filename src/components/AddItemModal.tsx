@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
+  SEASONS,
   supabase,
   type Category,
-  type TimeWindow
+  type Season
 } from '@/lib/supabase';
 
 interface AddItemModalProps {
@@ -14,26 +15,17 @@ interface AddItemModalProps {
   onAdded: () => void;
 }
 
-const TIME_WINDOWS: { code: TimeWindow; label: string }[] = [
-  { code: 'any',    label: 'any time' },
-  { code: 'spring', label: 'spring' },
-  { code: 'summer', label: 'summer' },
-  { code: 'fall',   label: 'fall' },
-  { code: 'winter', label: 'winter' },
-  { code: 'jan', label: 'jan' }, { code: 'feb', label: 'feb' }, { code: 'mar', label: 'mar' },
-  { code: 'apr', label: 'apr' }, { code: 'may', label: 'may' }, { code: 'jun', label: 'jun' },
-  { code: 'jul', label: 'jul' }, { code: 'aug', label: 'aug' }, { code: 'sep', label: 'sep' },
-  { code: 'oct', label: 'oct' }, { code: 'nov', label: 'nov' }, { code: 'dec', label: 'dec' }
-];
-
 export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('just');
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>('any');
+  const [seasons, setSeasons] = useState<Set<Season>>(new Set());
+  const [showDateRange, setShowDateRange] = useState(false);
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [justAdded, setJustAdded] = useState<string | null>(null); // title that was just saved
+  const [justAdded, setJustAdded] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,16 +33,27 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Auto-clear the "just added" confirmation after a few seconds
   useEffect(() => {
     if (!justAdded) return;
     const t = setTimeout(() => setJustAdded(null), 3500);
     return () => clearTimeout(t);
   }, [justAdded]);
 
+  function toggleSeason(s: Season) {
+    setSeasons(prev => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  }
+
   async function handleSubmit(addAnother: boolean) {
     if (!title.trim()) {
       setError('title is required');
+      return;
+    }
+    if (showDateRange && dateStart && dateEnd && dateEnd < dateStart) {
+      setError('end date must be after start date');
       return;
     }
     setSubmitting(true);
@@ -65,7 +68,10 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
     const { error: dbError } = await supabase.from('items').insert({
       title: savedTitle,
       category,
-      time_window: timeWindow,
+      seasons: Array.from(seasons),
+      date_start: showDateRange && dateStart ? dateStart : null,
+      date_end: showDateRange && dateEnd ? dateEnd : (showDateRange && dateStart ? dateStart : null),
+      time_window: 'any', // legacy field, kept for backward compat
       status: 'someday',
       notes: notes.trim() || null,
       added_by: addedBy
@@ -79,12 +85,10 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
     }
 
     if (addAnother) {
-      // Reset form for next entry, keep modal open, show confirmation
       setTitle('');
       setNotes('');
-      // Keep category & time window — most "add another" cases are similar items
+      // Keep category, seasons, date range — usually you're adding similar items
       setJustAdded(savedTitle);
-      // Refocus the title field so they can type immediately
       setTimeout(() => titleInputRef.current?.focus(), 50);
     } else {
       onAdded();
@@ -175,7 +179,6 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           </div>
         )}
 
-        {/* Title */}
         <Label>what do you want to do?</Label>
         <input
           ref={titleInputRef}
@@ -198,52 +201,135 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           }}
         />
 
-        {/* Category */}
         <Label>category</Label>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: 6,
             marginBottom: 18
           }}
         >
           {CATEGORIES.map(c => (
-            <PillButton
+            <CategoryButton
               key={c.code}
               active={category === c.code}
               onClick={() => setCategory(c.code)}
+              color={c.color}
+              label={c.label}
+            />
+          ))}
+        </div>
+
+        <Label>season tags (optional)</Label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+          {SEASONS.map(s => (
+            <PillButton
+              key={s.code}
+              active={seasons.has(s.code)}
+              onClick={() => toggleSeason(s.code)}
             >
-              {c.label}
+              {s.label}
             </PillButton>
           ))}
         </div>
 
-        {/* Time window */}
-        <Label>time window</Label>
-        <div
-          className="no-scrollbar"
+        {/* Optional date range toggle */}
+        <button
+          onClick={() => setShowDateRange(v => !v)}
           style={{
             display: 'flex',
-            gap: 6,
-            overflowX: 'auto',
-            paddingBottom: 6,
-            marginBottom: 18
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 0',
+            marginBottom: 12,
+            background: 'transparent',
+            border: 'none',
+            color: theme.brass,
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: 10,
+            letterSpacing: '0.15em',
+            textTransform: 'uppercase',
+            opacity: 0.8
           }}
         >
-          {TIME_WINDOWS.map(w => (
-            <PillButton
-              key={w.code}
-              active={timeWindow === w.code}
-              onClick={() => setTimeWindow(w.code)}
-              style={{ flexShrink: 0 }}
-            >
-              {w.label}
-            </PillButton>
-          ))}
-        </div>
+          <span style={{ fontSize: 14, lineHeight: 1, width: 14 }}>{showDateRange ? '−' : '+'}</span>
+          specific date / range
+        </button>
 
-        {/* Notes */}
+        {showDateRange && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: 18,
+              padding: 12,
+              background: theme.surface,
+              borderRadius: 4,
+              border: `1px solid ${theme.dimmer}`
+            }}
+          >
+            <div>
+              <div style={{
+                fontFamily: "'Geist Mono', monospace",
+                fontSize: 8,
+                letterSpacing: '0.15em',
+                color: theme.dim,
+                textTransform: 'uppercase',
+                marginBottom: 4
+              }}>
+                from
+              </div>
+              <input
+                type="date"
+                value={dateStart}
+                onChange={(e) => setDateStart(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: theme.bg,
+                  border: `1px solid ${theme.dimmer}`,
+                  borderRadius: 3,
+                  padding: '8px 10px',
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 11,
+                  color: theme.cream,
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+            <div>
+              <div style={{
+                fontFamily: "'Geist Mono', monospace",
+                fontSize: 8,
+                letterSpacing: '0.15em',
+                color: theme.dim,
+                textTransform: 'uppercase',
+                marginBottom: 4
+              }}>
+                to (optional)
+              </div>
+              <input
+                type="date"
+                value={dateEnd}
+                onChange={(e) => setDateEnd(e.target.value)}
+                min={dateStart || undefined}
+                style={{
+                  width: '100%',
+                  background: theme.bg,
+                  border: `1px solid ${theme.dimmer}`,
+                  borderRadius: 3,
+                  padding: '8px 10px',
+                  fontFamily: "'Geist Mono', monospace",
+                  fontSize: 11,
+                  color: theme.cream,
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <Label>notes (optional)</Label>
         <textarea
           value={notes}
@@ -280,7 +366,6 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
           </div>
         )}
 
-        {/* Three buttons: cancel · add another · add & close */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 8 }}>
           <button
             onClick={onClose}
@@ -359,16 +444,62 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+function CategoryButton({
+  active,
+  onClick,
+  color,
+  label
+}: {
+  active: boolean;
+  onClick: () => void;
+  color: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 7,
+        fontFamily: "'Geist Mono', monospace",
+        fontSize: 10,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        padding: '10px 12px',
+        border: `1px solid ${active ? theme.brass : theme.dimmer}`,
+        borderRadius: 3,
+        color: active ? theme.cream : theme.dim,
+        background: active ? 'rgba(200, 169, 126, 0.12)' : 'transparent',
+        fontWeight: active ? 600 : 400,
+        textAlign: 'left'
+      }}
+    >
+      <span
+        style={{
+          width: 9,
+          height: 9,
+          borderRadius: '50%',
+          background: color,
+          opacity: active ? 1 : 0.5,
+          flexShrink: 0
+        }}
+      />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 function PillButton({
   active,
   onClick,
-  children,
-  style
+  children
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
-  style?: React.CSSProperties;
 }) {
   return (
     <button
@@ -384,8 +515,7 @@ function PillButton({
         color: active ? theme.board : theme.cream,
         background: active ? theme.brass : 'transparent',
         fontWeight: active ? 700 : 400,
-        whiteSpace: 'nowrap',
-        ...style
+        whiteSpace: 'nowrap'
       }}
     >
       {children}

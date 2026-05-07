@@ -2,7 +2,7 @@
 
 import { theme } from '@/lib/theme';
 
-export type TabKey = 'board' | 'timeline' | 'memories';
+export type TabKey = 'board' | 'roll' | 'timeline' | 'memories';
 
 interface TabBarProps {
   tab: TabKey;
@@ -11,6 +11,7 @@ interface TabBarProps {
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'board',    label: 'board',    icon: <BoardIcon /> },
+  { key: 'roll',     label: 'roll',     icon: <RollIcon /> },
   { key: 'timeline', label: 'timeline', icon: <TimelineIcon /> },
   { key: 'memories', label: 'memories', icon: <MemoryIcon /> }
 ];
@@ -36,7 +37,7 @@ export function TabBar({ tab, onChange }: TabBarProps) {
           maxWidth: 520,
           margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           padding: '8px 0 6px'
         }}
       >
@@ -93,6 +94,40 @@ function BoardIcon() {
       <rect x="3" y="4" width="14" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
       <rect x="3" y="9" width="14" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
       <rect x="3" y="14" width="14" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+// Pail-Die Hybrid: a die wearing a bucket handle
+function RollIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 50 50" fill="none">
+      {/* Bucket handle arching above */}
+      <path
+        d="M 13 16 Q 13 8, 25 8 Q 37 8, 37 16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Die body */}
+      <rect
+        x="11"
+        y="17"
+        width="28"
+        height="26"
+        rx="4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* 5 pips */}
+      <circle cx="18" cy="24" r="1.6" fill="currentColor" />
+      <circle cx="32" cy="24" r="1.6" fill="currentColor" />
+      <circle cx="25" cy="30" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="36" r="1.6" fill="currentColor" />
+      <circle cx="32" cy="36" r="1.6" fill="currentColor" />
     </svg>
   );
 }

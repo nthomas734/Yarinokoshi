@@ -1,81 +1,90 @@
-# Updating to pail (v3)
+# Updating to pail v4
 
-This is a rebranding of the existing yarinokoshi app. New name, new logo, new wordmark — but the data and Supabase setup are unchanged.
+This is a feature release. New: edit existing items, multi-season tags + date ranges, category color dots, randomize tab, and Wisconsin State Fair fixes for "Blackhawks" misspelling (you can fix that yourself in edit mode).
 
-You can either:
-1. **Replace the existing GitHub repo** (faster — keeps the same Vercel project and URL)
-2. **Create a new GitHub repo** (cleaner — but you'll get a new URL and need to add the env vars again)
+## Step 1 — Run the migration in Supabase
 
-I'd recommend option 1 unless you want a clean break.
+1. Open your Supabase project → **SQL Editor** → **New query**
+2. Open the `MIGRATION.sql` file from this zip
+3. Copy the entire contents and paste into the SQL Editor
+4. Click **Run**
 
-## Option 1: Replace files in existing repo (recommended)
+The migration:
+- Adds new columns: `seasons` (text array), `date_start`, `date_end`
+- Migrates any existing single time_window value into the seasons array
+- Cleans up any old status names (`dreaming` → `someday`, etc.)
+- Cleans up any old "fair" category → "road"
+- **Conditionally seeds** the bucket list from your screenshots — but ONLY if the `items` table is currently empty. If you have any items in the table, the seed does nothing. Safe to run.
+
+You should see "Success. No rows returned." (the DO block doesn't return rows even when it inserts).
+
+## Step 2 — Replace files in GitHub
 
 1. Download this zip and unzip it
-2. In your existing yarinokoshi GitHub repo, delete the following files first (so the new ones land cleanly):
-   - `public/icon-192.png`
-   - `public/icon-512.png`
-   - (don't delete anything else — overwrites are fine)
-3. Click **Add file** → **Upload files**
-4. Drag every file from the unzipped `pail/` folder into GitHub
-5. GitHub will warn about overwrites — accept all
-6. Commit changes
+2. In your GitHub repo, click **Add file** → **Upload files**
+3. Drag every file from the unzipped `pail/` folder into GitHub
+4. GitHub will ask about overwrites — accept all
+5. Commit changes
 
-Vercel will auto-deploy in ~2 minutes. **You don't need to touch Supabase or env vars** — the database is the same.
+Vercel auto-deploys in ~2 minutes.
 
-After it deploys:
-- Open `yarinokoshi.vercel.app` (your existing URL still works)
-- The new logo, name, and tagline will appear
-- Your existing items are preserved
+## What's new
 
-## Optional: rename the Vercel project / URL
+### Edit existing items
+Tap any item → tap the **edit** button in the top-right of the detail modal. Now you can change the title, category, season tags, date range, and notes. (Status changes still work in read mode without entering edit mode.)
 
-If you want the URL to actually say `pail.vercel.app`:
+### Multi-season tags
+When adding/editing an item, you can now select multiple seasons (e.g., "summer + fall" for something that works either time). Pure visibility tool for the Board view filter.
 
-1. In Vercel → your project → Settings → General → scroll to "Project Name"
-2. Change it from `yarinokoshi` to `pail`
-3. Save
-4. Settings → Domains → claim `pail.vercel.app` if available (it might be taken)
-5. The old `yarinokoshi.vercel.app` will still work as an alias
+### Optional specific date range
+Below the season tags is a **+ specific date / range** button. Tap it to add a precise date or date range — useful for festivals, friend's weddings, touring shows, etc. When set, the item shows in every month its date range covers in the Timeline view.
 
-This is purely cosmetic. The app works fine on either URL.
+### 8 distinct category colors
+Each category now has a small colored dot before the title:
+- 🟢 sage — Neighborhoods
+- 🟪 mauve — Museums
+- 🟠 terracotta — Sports
+- 🔵 dusty blue — Road Trips
+- 🟡 ochre — Seasonal
+- 🔴 muted red — Food & Drink
+- 🟣 violet — Shows
+- 🟤 brass — Just Because
 
-## Optional: rename the GitHub repo
+Dots also appear in the category filter pills, the Roll multi-select, and the timeline rows.
 
-1. GitHub repo → Settings → scroll down → Rename repository to `pail`
-2. Vercel will detect the new repo name automatically and reconnect
+### Roll tab (NEW — 2nd tab)
+A whole new tab for picking what to do when you can't decide. The tab bar is now: **Board · Roll · Timeline · Memories**.
 
-## Rehome the icon on your phone
+The Roll tab:
+- Pre-populates category checkboxes from your current Board filter
+- Shows count of eligible items in the pool
+- "Roll the pail" runs a slot-machine animation cycling through random titles
+- Lands on a final pick with a flap-board reveal
+- Three buttons after reveal: **Re-roll**, **Mark Soon**, **View Item**
+- Excludes items already marked "done"
 
-Since the icon image changed:
-1. On your phone, delete the existing yarinokoshi home screen icon (long-press → Remove App)
-2. Open Safari, go to your URL
-3. Share → Add to Home Screen
-4. The new pail logo (Chicago skyline with handle) will appear on your home screen
+### Header padding
+Added more breathing room above the "Chicago, before we go" tagline.
 
-## What changed
+## What hasn't changed
 
-- **Name:** yarinokoshi → pail
-- **Logo:** Hand-drawn brass-line Chicago skyline with bucket handle arching above (sister to daizu's bean mark)
-- **Wordmark:** "やり残し / yarinokoshi" → "pail" in Fraunces serif
-- **Tagline:** "things left to do" → "chicago, before we go"
-- **Empty states:** removed Japanese kanji (空, 始, 記), replaced with brass-line pail illustrations
-- **Copy:** "add to the bucket" → "add to the pail", "the bucket is empty" → "the pail is empty", etc.
-- **localStorage key:** `yarinokoshi_user` → `pail_user` (if you set one of these for attribution, you'll need to set it again — see SETUP.md)
-- **Removed:** Noto Serif JP font dependency
-
-## What didn't change
-
-- Supabase schema, env vars, storage bucket
-- Categories, statuses, time windows
+- Env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+- Storage bucket name (`memories`)
+- PWA manifest, icon, palette, fonts
 - All your existing items and memories
-- Filter behavior, timeline behavior, add-another flow
-- Aubergine/brass palette
-- Bottom tab bar + swipe navigation
-- Subtle countdown to San Diego
 
-## What's not in this update (could come later)
+## Notes
 
-- A real domain (`pail.app` etc.)
-- Splash screen with logo animation on PWA launch
-- Logo flip-in animation on first load (similar to daizu's Japanese-to-English flip)
-- Attribution display in UI
+- The old single `time_window` column is still in the schema but no longer used by the UI — kept for backward compatibility. The migration writes the new `seasons` array based on it for existing rows.
+- Items where seasons is `[]` AND date_start is null show as "any time" in the Board view, and appear in the "anytime · no window" section at the bottom of the Timeline view.
+- Date ranges are inclusive on both ends. A single-date item is just date_start with date_end equal to it.
+- "Mark Soon" from the Roll tab updates the item's status without opening the detail modal — fast path for "okay, let's actually do this one this week."
+
+## What's next (ideas for v5)
+
+- Edit on the item detail modal could include status change (currently those are separate)
+- "Unmark" a done item (rare but might come up)
+- Save Roll history ("things we rolled but didn't pick")
+- Streak counter on the Roll tab
+- Real attribution display ("added by you · marked done by [her]")
+- A "wedding" or "trip" style template that adds multiple items at once

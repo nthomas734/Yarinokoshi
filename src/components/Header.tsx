@@ -7,7 +7,7 @@ export function Header() {
     <div
       style={{
         textAlign: 'center',
-        padding: '20px 16px 18px',
+        padding: '36px 16px 22px',
         position: 'relative'
       }}
     >

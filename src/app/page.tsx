@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { theme, daysToSanDiego } from '@/lib/theme';
-import { supabase, type Item } from '@/lib/supabase';
+import { supabase, type Category, type Item, type Season } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { TabBar, type TabKey } from '@/components/TabBar';
 import { BoardView } from '@/components/BoardView';
+import { RollView } from '@/components/RollView';
 import { TimelineView } from '@/components/TimelineView';
 import { MemoriesView } from '@/components/MemoriesView';
 import { AddItemModal } from '@/components/AddItemModal';
 import { ItemDetailModal } from '@/components/ItemDetailModal';
 
-const TAB_ORDER: TabKey[] = ['board', 'timeline', 'memories'];
+const TAB_ORDER: TabKey[] = ['board', 'roll', 'timeline', 'memories'];
 
 export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -20,6 +21,10 @@ export default function HomePage() {
   const [addOpen, setAddOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [days, setDays] = useState<number>(daysToSanDiego());
+
+  // Lifted board filter state (so Roll tab can read current category filter)
+  const [catFilter, setCatFilter] = useState<'all' | Category>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | Season>('all');
 
   // Swipe handling
   const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -37,8 +42,20 @@ export default function HomePage() {
       .from('items')
       .select('*')
       .order('created_at', { ascending: false });
-    if (!error && data) setItems(data as Item[]);
+    if (!error && data) {
+      // Normalize: ensure seasons is always an array (some legacy rows may have null)
+      const normalized = (data as Item[]).map(item => ({
+        ...item,
+        seasons: item.seasons ?? []
+      }));
+      setItems(normalized);
+    }
     setLoading(false);
+  }
+
+  async function markItemSoon(item: Item) {
+    await supabase.from('items').update({ status: 'soon' }).eq('id', item.id);
+    fetchItems();
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -54,7 +71,6 @@ export default function HomePage() {
     const dt = Date.now() - touchStart.current.t;
     touchStart.current = null;
 
-    // Only treat as a swipe if mostly horizontal, fast enough, and far enough
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 500) {
       const idx = TAB_ORDER.indexOf(tab);
       if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
@@ -82,6 +98,18 @@ export default function HomePage() {
             loading={loading}
             onSelect={setDetailItem}
             onAdd={() => setAddOpen(true)}
+            catFilter={catFilter}
+            setCatFilter={setCatFilter}
+            timeFilter={timeFilter}
+            setTimeFilter={setTimeFilter}
+          />
+        )}
+        {tab === 'roll' && (
+          <RollView
+            items={items}
+            initialCategoryFilter={catFilter}
+            onSelect={setDetailItem}
+            onMarkSoon={markItemSoon}
           />
         )}
         {tab === 'timeline' && <TimelineView items={items} onSelect={setDetailItem} />}

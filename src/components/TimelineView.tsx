@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 import { theme } from '@/lib/theme';
 import {
   CATEGORIES,
-  type Item,
-  type TimeWindow
+  itemCoversMonth,
+  type Item
 } from '@/lib/supabase';
 
 interface TimelineViewProps {
@@ -14,13 +14,6 @@ interface TimelineViewProps {
 }
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-const MONTH_KEYS: TimeWindow[] = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-const SEASON_MONTHS: Record<string, number[]> = {
-  spring: [2, 3, 4],
-  summer: [5, 6, 7],
-  fall:   [8, 9, 10],
-  winter: [11, 0, 1]
-};
 
 interface MonthBucket {
   year: number;
@@ -31,7 +24,11 @@ interface MonthBucket {
 
 export function TimelineView({ items, onSelect }: TimelineViewProps) {
   const buckets = useMemo(() => buildBuckets(items), [items]);
-  const anyTimeItems = items.filter(i => i.time_window === 'any' && i.status !== 'done');
+  const anyTimeItems = items.filter(i =>
+    (!i.seasons || i.seasons.length === 0) &&
+    !i.date_start &&
+    i.status !== 'done'
+  );
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out', paddingBottom: 20 }}>
@@ -103,27 +100,29 @@ function buildBuckets(items: Item[]): MonthBucket[] {
     cursor.setMonth(cursor.getMonth() + 1);
   }
 
-  // Drop each item into its NEXT upcoming matching bucket only (no duplicates).
-  // If the next match has already passed (none ahead), skip it entirely.
+  // For each item, place it in matching buckets.
+  // Behavior:
+  //  - If item has specific date range: show in every month the range covers
+  //  - If item has season tags only: show in only the NEXT upcoming matching month (rolls forward)
   items.forEach(item => {
     if (item.status === 'done') return;
-    const tw = item.time_window;
-    if (tw === 'any') return; // shown separately
+    const hasDateRange = !!item.date_start;
 
-    const monthIndex = MONTH_KEYS.indexOf(tw as TimeWindow);
-    let targetBucketIdx: number = -1;
-
-    if (monthIndex >= 0) {
-      // Find first bucket matching this month
-      targetBucketIdx = buckets.findIndex(b => b.month === monthIndex);
-    } else if (tw in SEASON_MONTHS) {
-      const months = SEASON_MONTHS[tw];
-      targetBucketIdx = buckets.findIndex(b => months.includes(b.month));
+    if (hasDateRange) {
+      // Show in every overlapping month
+      buckets.forEach(b => {
+        if (itemCoversMonth(item, b.year, b.month)) {
+          b.items.push(item);
+        }
+      });
+    } else if (item.seasons && item.seasons.length > 0) {
+      // Show only in the next matching month
+      const targetIdx = buckets.findIndex(b => itemCoversMonth(item, b.year, b.month));
+      if (targetIdx >= 0) {
+        buckets[targetIdx].items.push(item);
+      }
     }
-
-    if (targetBucketIdx >= 0) {
-      buckets[targetBucketIdx].items.push(item);
-    }
+    // Items with no seasons and no date range are shown in the "anytime" section below
   });
 
   return buckets;
@@ -210,18 +209,36 @@ function TimelineItem({ item, onSelect }: { item: Item; onSelect: (item: Item) =
     >
       <div
         style={{
-          fontFamily: "'Geist Mono', monospace",
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-          color: theme.tileText,
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          minWidth: 0
         }}
       >
-        {item.title}
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: cat?.color ?? theme.brass,
+            flexShrink: 0
+          }}
+        />
+        <div
+          style={{
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            color: theme.tileText,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {item.title}
+        </div>
       </div>
       <div
         style={{
