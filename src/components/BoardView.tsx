@@ -219,7 +219,7 @@ function FilterPill({
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
         padding: subtle ? '5px 9px' : '6px 10px',
-        border: `1px solid ${active ? theme.brass : 'rgba(200, 169, 126, 0.25)'}`,
+        border: `1px solid ${active ? theme.brass : 'rgba(214, 185, 125, 0.25)'}`,
         borderRadius: 3,
         color: active ? theme.board : theme.brass,
         background: active ? theme.brass : 'transparent',

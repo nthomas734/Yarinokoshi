@@ -76,7 +76,7 @@ export function AddItemModal({ onClose, onAdded }: AddItemModalProps) {
 
     const savedTitle = title.trim();
 
-    const { error: dbError } = await supabase.from('pail_items').insert({
+    const { error: dbError } = await supabase.from('items').insert({
       title: savedTitle,
       category,
       seasons: Array.from(seasons),
@@ -425,7 +425,7 @@ function CategoryButton({
         border: `1px solid ${active ? theme.brass : theme.dimmer}`,
         borderRadius: 3,
         color: active ? theme.cream : theme.dim,
-        background: active ? 'rgba(200, 169, 126, 0.12)' : 'transparent',
+        background: active ? 'rgba(214, 185, 125, 0.12)' : 'transparent',
         fontWeight: active ? 600 : 400,
         textAlign: 'left'
       }}

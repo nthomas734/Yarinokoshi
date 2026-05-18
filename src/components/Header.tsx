@@ -11,45 +11,53 @@ export function Header() {
         position: 'relative'
       }}
     >
-      {/* Pail-Die Hybrid mark — die with bucket handle */}
+      {/* Checklist mark */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
-          marginBottom: 12,
+          marginBottom: 14,
           animation: 'fadeIn 0.6s ease-out'
         }}
       >
         <svg
-          viewBox="0 0 50 50"
-          width="52"
-          height="52"
+          viewBox="0 0 100 100"
+          width="56"
+          height="56"
           xmlns="http://www.w3.org/2000/svg"
           aria-label="pail"
         >
-          {/* Bucket handle arching above */}
+          {/* Row 1: checkmark + line */}
           <path
-            d="M 13 16 Q 13 8, 25 8 Q 37 8, 37 16"
+            d="M 22 30 L 28 36 L 38 24"
             fill="none"
             stroke={theme.brass}
-            strokeWidth="2"
+            strokeWidth="2.8"
             strokeLinecap="round"
-          />
-          {/* Die body */}
-          <rect
-            x="11" y="17" width="28" height="26" rx="4"
-            fill="none"
-            stroke={theme.brass}
-            strokeWidth="2"
             strokeLinejoin="round"
+          />
+          <line
+            x1="46" y1="30" x2="78" y2="30"
+            stroke={theme.brass}
+            strokeWidth="2.8"
             strokeLinecap="round"
           />
-          {/* 5 pips */}
-          <circle cx="18" cy="24" r="1.8" fill={theme.brass} />
-          <circle cx="32" cy="24" r="1.8" fill={theme.brass} />
-          <circle cx="25" cy="30" r="1.8" fill={theme.brass} />
-          <circle cx="18" cy="36" r="1.8" fill={theme.brass} />
-          <circle cx="32" cy="36" r="1.8" fill={theme.brass} />
+          {/* Row 2: bullet + line */}
+          <circle cx="30" cy="50" r="2.5" fill={theme.brass} opacity="0.5" />
+          <line
+            x1="46" y1="50" x2="78" y2="50"
+            stroke={theme.brass}
+            strokeWidth="2.8"
+            strokeLinecap="round"
+          />
+          {/* Row 3: bullet + line */}
+          <circle cx="30" cy="70" r="2.5" fill={theme.brass} opacity="0.5" />
+          <line
+            x1="46" y1="70" x2="78" y2="70"
+            stroke={theme.brass}
+            strokeWidth="2.8"
+            strokeLinecap="round"
+          />
         </svg>
       </div>
 
@@ -74,7 +82,7 @@ export function Header() {
           fontSize: 9,
           letterSpacing: '0.2em',
           color: theme.brass,
-          opacity: 0.55,
+          opacity: 0.6,
           marginTop: 8,
           textTransform: 'uppercase'
         }}

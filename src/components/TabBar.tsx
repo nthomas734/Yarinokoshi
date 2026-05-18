@@ -98,36 +98,24 @@ function BoardIcon() {
   );
 }
 
-// Pail-Die Hybrid: a die wearing a bucket handle
+// Plain die — the bucket-handle hybrid is gone with the v5 brand refresh
 function RollIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 50 50" fill="none">
-      {/* Bucket handle arching above */}
-      <path
-        d="M 13 16 Q 13 8, 25 8 Q 37 8, 37 16"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        fill="none"
-      />
       {/* Die body */}
       <rect
-        x="11"
-        y="17"
-        width="28"
-        height="26"
-        rx="4"
+        x="11" y="11" width="28" height="28" rx="4"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinejoin="round"
         fill="none"
       />
       {/* 5 pips */}
-      <circle cx="18" cy="24" r="1.6" fill="currentColor" />
-      <circle cx="32" cy="24" r="1.6" fill="currentColor" />
-      <circle cx="25" cy="30" r="1.6" fill="currentColor" />
-      <circle cx="18" cy="36" r="1.6" fill="currentColor" />
-      <circle cx="32" cy="36" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="18" r="1.6" fill="currentColor" />
+      <circle cx="32" cy="18" r="1.6" fill="currentColor" />
+      <circle cx="25" cy="25" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="32" r="1.6" fill="currentColor" />
+      <circle cx="32" cy="32" r="1.6" fill="currentColor" />
     </svg>
   );
 }

@@ -202,7 +202,7 @@ export function RollView({ items, initialCategoryFilter, onSelect, onMarkSoon }:
                   alignItems: 'center',
                   gap: 8,
                   padding: '10px 12px',
-                  background: active ? 'rgba(200, 169, 126, 0.12)' : theme.surface,
+                  background: active ? 'rgba(214, 185, 125, 0.12)' : theme.surface,
                   border: `1px solid ${active ? theme.brass : theme.dimmer}`,
                   borderRadius: 4,
                   fontFamily: "'Geist Mono', monospace",

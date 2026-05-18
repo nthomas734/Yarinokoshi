@@ -16,9 +16,9 @@ Sister app to [daizu](https://daizu-henna.vercel.app).
 
 ## Design
 
-- Aubergine/dusk palette (`#2A1F2E` bg) with brass/cream accents
+- Muted Cubs blue palette (`#1A2D52` bg) with cream-gold accent (`#D6B97D`)
 - Fraunces (display) + Geist Mono (board) + Manrope (body)
-- Logo: Chicago skyline as a pail body with a brass-line bucket handle
+- Logo: brass-line checklist mark (one item checked, two pending)
 - Four views: Board · Roll · Timeline · Memories
 
 ## Features (v4)

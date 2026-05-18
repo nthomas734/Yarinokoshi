@@ -1,7 +1,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: #2A1F2E;
+  background: #1A2D52;
   color: #F5EDE0;
   font-family: 'Manrope', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -12,8 +12,8 @@ html, body {
 body {
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at 20% 10%, rgba(200, 169, 126, 0.04), transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(139, 111, 71, 0.05), transparent 50%);
+    radial-gradient(circle at 20% 10%, rgba(214, 185, 125, 0.04), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(168, 147, 104, 0.05), transparent 50%);
   background-attachment: fixed;
 }
 

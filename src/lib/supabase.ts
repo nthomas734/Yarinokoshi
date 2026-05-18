@@ -45,14 +45,14 @@ export interface Item {
 }
 
 export const CATEGORIES: { code: Category; label: string; short: string; color: string }[] = [
-  { code: 'neighborhood', label: 'neighborhoods', short: 'NBHD', color: '#7B9F8C' },
-  { code: 'museum',       label: 'museums',       short: 'MUSE', color: '#A88BB0' },
-  { code: 'sport',        label: 'sports',        short: 'SPRT', color: '#C77B5C' },
-  { code: 'road',         label: 'road trips',    short: 'ROAD', color: '#8AA4C2' },
-  { code: 'seasonal',     label: 'seasonal',      short: 'SEAS', color: '#D4A657' },
-  { code: 'food',         label: 'food & drink',  short: 'FOOD', color: '#B85C5C' },
-  { code: 'show',         label: 'shows',         short: 'SHOW', color: '#9B7EC8' },
-  { code: 'just',         label: 'just because',  short: 'JUST', color: '#C8A97E' }
+  { code: 'neighborhood', label: 'neighborhoods', short: 'NBHD', color: '#7B9F8C' }, // sage (kept)
+  { code: 'museum',       label: 'museums',       short: 'MUSE', color: '#C89BB8' }, // warmer rose-mauve (was dusty mauve — pops on blue)
+  { code: 'sport',        label: 'sports',        short: 'SPRT', color: '#D58A5C' }, // brighter terracotta (was #C77B5C — needs more warmth on blue)
+  { code: 'road',         label: 'road trips',    short: 'ROAD', color: '#8BC4D1' }, // teal-aqua (was dusty blue — separates from bg)
+  { code: 'seasonal',     label: 'seasonal',      short: 'SEAS', color: '#E8C570' }, // ochre (kept, slightly brighter)
+  { code: 'food',         label: 'food & drink',  short: 'FOOD', color: '#D17070' }, // brighter coral-red (was muted red — needs warmth on blue)
+  { code: 'show',         label: 'shows',         short: 'SHOW', color: '#B89AE0' }, // softer lavender (was deeper violet — easier on the blue)
+  { code: 'just',         label: 'just because',  short: 'JUST', color: '#D6B97D' }  // cream-gold (matches new accent)
 ];
 
 export const STATUS_LABELS: Record<Status, string> = {

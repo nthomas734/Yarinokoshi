@@ -39,7 +39,7 @@ export default function HomePage() {
   async function fetchItems() {
     setLoading(true);
     const { data, error } = await supabase
-      .from('pail_items')
+      .from('items')
       .select('*')
       .order('created_at', { ascending: false });
     if (!error && data) {
@@ -55,7 +55,7 @@ export default function HomePage() {
   }
 
   async function markItemSoon(item: Item) {
-    await supabase.from('pail_items').update({ status: 'soon' }).eq('id', item.id);
+    await supabase.from('items').update({ status: 'soon' }).eq('id', item.id);
     fetchItems();
   }
 

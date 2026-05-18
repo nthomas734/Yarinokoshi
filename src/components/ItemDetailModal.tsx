@@ -80,14 +80,14 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
       updates.memory_photo = photoUrl;
     }
 
-    await supabase.from('pail_items').update(updates).eq('id', item.id);
+    await supabase.from('items').update(updates).eq('id', item.id);
     setUpdating(false);
     onUpdated();
   }
 
   async function saveMemory() {
     setUpdating(true);
-    await supabase.from('pail_items').update({
+    await supabase.from('items').update({
       memory_note: memoryNote.trim() || null,
       memory_photo: photoUrl
     }).eq('id', item.id);
@@ -114,7 +114,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
 
   async function deleteItem() {
     setUpdating(true);
-    await supabase.from('pail_items').delete().eq('id', item.id);
+    await supabase.from('items').delete().eq('id', item.id);
     setUpdating(false);
     onUpdated();
   }
@@ -131,7 +131,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
     setUpdating(true);
     setEditError(null);
 
-    const { error } = await supabase.from('pail_items').update({
+    const { error } = await supabase.from('items').update({
       title: editTitle.trim(),
       category: editCategory,
       seasons: Array.from(editSeasons),
@@ -311,7 +311,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                 border: `1px solid ${isDone ? theme.brass : theme.dimmer}`,
                 borderRadius: 4,
                 marginBottom: 16,
-                background: isDone ? 'rgba(200, 169, 126, 0.04)' : 'transparent'
+                background: isDone ? 'rgba(214, 185, 125, 0.04)' : 'transparent'
               }}
             >
               <div
@@ -558,7 +558,7 @@ export function ItemDetailModal({ item, onClose, onUpdated }: ItemDetailModalPro
                       border: `1px solid ${active ? theme.brass : theme.dimmer}`,
                       borderRadius: 3,
                       color: active ? theme.cream : theme.dim,
-                      background: active ? 'rgba(200, 169, 126, 0.12)' : 'transparent',
+                      background: active ? 'rgba(214, 185, 125, 0.12)' : 'transparent',
                       fontWeight: active ? 600 : 400,
                       textAlign: 'left'
                     }}
