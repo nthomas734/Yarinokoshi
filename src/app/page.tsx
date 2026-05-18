@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { theme, daysToSanDiego } from '@/lib/theme';
 import { supabase, type Category, type Item, type Season } from '@/lib/supabase';
 import { Header } from '@/components/Header';
 import { TabBar, type TabKey } from '@/components/TabBar';
@@ -20,7 +19,6 @@ export default function HomePage() {
   const [tab, setTab] = useState<TabKey>('board');
   const [addOpen, setAddOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<Item | null>(null);
-  const [days, setDays] = useState<number>(daysToSanDiego());
 
   // Lifted board filter state (so Roll tab can read current category filter)
   const [catFilter, setCatFilter] = useState<'all' | Category>('all');
@@ -32,8 +30,6 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchItems();
-    const interval = setInterval(() => setDays(daysToSanDiego()), 60_000 * 60); // hourly
-    return () => clearInterval(interval);
   }, []);
 
   async function fetchItems() {
@@ -115,24 +111,6 @@ export default function HomePage() {
         )}
         {tab === 'timeline' && <TimelineView items={items} onSelect={setDetailItem} />}
         {tab === 'memories' && <MemoriesView items={items} onSelect={setDetailItem} />}
-
-        <div
-          style={{
-            textAlign: 'right',
-            fontFamily: "'Geist Mono', monospace",
-            fontSize: 9,
-            letterSpacing: '0.15em',
-            color: theme.brass,
-            opacity: 0.4,
-            marginTop: 32,
-            marginBottom: 16,
-            paddingTop: 12,
-            borderTop: `1px dashed ${theme.dimmer}`,
-            textTransform: 'lowercase'
-          }}
-        >
-          {days} days to san diego
-        </div>
       </div>
 
       <TabBar tab={tab} onChange={setTab} />

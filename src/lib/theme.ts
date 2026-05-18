@@ -18,7 +18,7 @@ export const theme = {
   done:     '#6b8e6b'   // muted sage (kept — works well on blue)
 };
 
-export const sanDiegoDate = new Date('2027-09-30T00:00:00');
+export const sanDiegoDate = new Date('2026-12-15T00:00:00');
 
 export function daysToSanDiego(): number {
   const now = new Date();

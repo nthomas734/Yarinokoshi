@@ -1,81 +1,46 @@
-# Updating to pail v5 — visual refresh
+# Updating to pail v6 — header refresh
 
-A pure visual refresh. No database migration. No feature changes. Just palette + logo.
+A small patch. No database migration, no schema change, no env var change. Two files touched.
 
 ## What changed
 
-- **Palette:** aubergine + brass → **muted Cubs blue + cream-gold**
-  - Background: `#1A2D52` (was `#2A1F2E`)
-  - Primary accent: `#D6B97D` (was `#C8A97E`)
-  - Surface/cards: `#0E1F3D` (was `#1A1A1A`)
-- **App icon:** Pail-Die Hybrid → **Checklist** (three rows, first with a check, others with bullets)
-- **In-header logo:** Pail-Die → Checklist (same mark as the app icon)
-- **Roll tab icon:** Simplified from Pail-Die to a plain die (the bucket-handle was orphaned without the brand tying it back)
-- **Category color dots:** Re-tuned to harmonize with the blue background
-  - Museums: dusty mauve → warmer rose-mauve
-  - Sports: muted terracotta → brighter terracotta
-  - Road trips: dusty blue → teal-aqua (separates from the new bg)
-  - Food: muted red → coral-red
-  - Shows: violet → softer lavender
-  - Just because: brass → cream-gold (matches new accent)
-
-## Why
-
-The aubergine + brass was giving "Crown Royal velvet bag" energy. The muted Cubs blue keeps it Chicago-themed without being on-the-nose, and the cream-gold accent stays in the same metallic-warm family as brass while being distinct enough to feel like its own thing.
-
-Slate-and-blush is being saved for a future app.
+- **Countdown moved into the header.** Was a low-opacity footer at the bottom-right of every tab. Now lives prominently in the Header with the canonical kura typographic stack: small monospace eyebrow (`UNTIL SAN DIEGO`) above a big serif figure (`211 days`).
+- **Header reveal cascade.** Logo → wordmark → tagline → countdown each fade in with a 200ms stagger. The whole header takes about 1.7 seconds to fully appear on first paint. Reads as a curtain rising.
+- **Deadline updated to December 15, 2026.** Was September 30, 2027. The number is now ~7 months out, which makes the countdown actually pointed.
+- **Post-deadline graceful state.** If the countdown ever hits zero, the figure hides and the eyebrow changes to `SAN DIEGO, TODAY`. Doesn't render as a broken "0 days" forever.
 
 ## What didn't change
 
 - All data, items, memories
 - Supabase schema (no migration needed)
 - Env vars
-- Storage bucket
-- Tab structure (Board / Roll / Timeline / Memories)
-- Status flow (someday → planned → soon → done)
-- Categories list, multi-season tags, months, date ranges
-- Edit mode, Roll tab behavior, Timeline year bands
-- Fonts, layout, animations, copy
+- Tab structure, status flow, categories
+- Logo, palette, fonts
+- Everything else
 
-## Deploy steps
+## Deploy
 
-### Step 1 — Delete old icon files in GitHub
-
-Before uploading the new files, delete these in GitHub so the new ones land cleanly:
-- `public/icon.svg`
-- `public/icon-192.png`
-- `public/icon-512.png`
-- `public/apple-touch-icon.png`
-
-### Step 2 — Upload the new files
-
-1. Download this zip and unzip it
-2. In your GitHub repo, **Add file → Upload files**
+1. Download the zip, unzip it
+2. In your GitHub repo: **Add file → Upload files**
 3. Drag every file from the unzipped folder
 4. Accept overwrites
 5. Commit
 
-Vercel auto-deploys in ~2 min.
-
-### Step 3 — Refresh the home screen icon (iPhone)
-
-1. Long-press the existing pail icon → Remove App → Delete from Home Screen
-2. Open Safari, go to your URL, hard-refresh (close tab + reopen)
-3. Share → Add to Home Screen
-4. The new checklist icon will install
-
-## Notes
-
-- The token name `theme.brass` is preserved throughout the codebase but now points to `#D6B97D` (the new cream-gold). This kept the refactor surgical — no component-level changes were needed for the color swap, just an updated value in `theme.ts`.
-- The new accent works well with the existing status sage-green for "done" — no need to retune statuses.
-- "Roll the pail" copy in the Roll tab still works since the app is still named pail; the wordmark and tagline are unchanged.
+Vercel auto-deploys in ~2 min. PWA picks up the new build automatically — no need to remove and reinstall the home-screen icon since the icon files didn't change.
 
 ## What's next
 
-The next time we update pail, candidates queued up:
-- Real attribution display ("added by you · done by [her]")
-- Streak counter on Roll
-- Saved Roll history
-- A printable export when San Diego gets close
+This is the first of four planned polish passes:
 
-The next app (when you start one) gets the slate-and-blush palette I showed.
+- **v6 (this patch)** — header & countdown ✓
+- **v7** — loading screen with a bucket-overflowing or list-unraveling animation (mockups first)
+- **v8** — motion polish: completion celebration when an item gets marked done, cross-fade tab transitions, richer Roll reveal
+- **v9** — Memories section rework (mockups first)
+
+## Patch Notes
+
+- Countdown promoted from low-opacity footer to a prominent line in the Header with eyebrow + figure typography
+- Deadline updated from 9/30/2027 to 12/15/2026
+- Header elements now stagger-fade in on first paint (logo → wordmark → tagline → countdown)
+- Bottom-of-tab countdown footer removed (was redundant)
+- Post-deadline state handled gracefully — eyebrow changes to "san diego, today" and the figure hides instead of stuck at "0 days"
